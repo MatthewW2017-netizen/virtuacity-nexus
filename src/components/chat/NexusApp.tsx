@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MOCK_NODES, MOCK_USERS, MOCK_MESSAGES, MOCK_MODULES } from "@/lib/mockData";
-import { Message, Panel, Space, Node, Stream } from "@/types/chat";
+import { Message, Panel, Space, Node, Stream, District } from "@/types/chat";
 import { NexusPanel, UniversalCommandBar } from "./NexusGrid";
 import { 
   ChatStreamPanel, NodeExplorerPanel, BotForgePanel, AssetLibraryPanel, 

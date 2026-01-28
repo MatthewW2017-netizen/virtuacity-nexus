@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Message, User, Stream, Node, BotModule } from "@/types/chat";
+import { Message, User, Stream, Node, BotModule, District } from "@/types/chat";
 import { MOCK_NODES } from "@/lib/mockData";
 import { 
   Hash, Volume2, Megaphone, Sparkles, Send, MessageSquare, Share2, 
