@@ -134,12 +134,19 @@ export default function NexusApp() {
 
   const [notifications, setNotifications] = useState<{id: string, message: string, type: 'info' | 'alert'}[]>([]);
   const currentUserRole = useMemo(() => {
-    const user = MOCK_USERS["1"];
-    const role = user.cityRoles?.[activeNodeId] || 'Citizen';
-    // Map Visitor to Citizen for UI permissions
-    if (role === 'Visitor') return 'Citizen';
-    return role as 'Architect' | 'Founder' | 'Citizen';
-  }, [activeNodeId]);
+    if (!user) return 'Citizen';
+    
+    // Find the active node
+    const activeNode = nodes.find(n => n.id === activeNodeId);
+    
+    // If the user is the creator of the city, they are the FOUNDER
+    if (activeNode?.owner_id === user.id) {
+      return 'Founder';
+    }
+
+    // Default to Citizen for now (you can add more logic here later)
+    return 'Citizen';
+  }, [user, nodes, activeNodeId]);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [canvasPos, setCanvasPos] = useState({ x: 0, y: 0, zoom: 1 });
   const [isWarping, setIsWarping] = useState(false);
