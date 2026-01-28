@@ -154,6 +154,19 @@ export default function NexusApp() {
   const [pulsingPanelId, setPulsingPanelId] = useState<string | null>(null);
   const [focusedPanelId, setFocusedPanelId] = useState<string | null>(null);
   const [showCreateCityModal, setShowCreateCityModal] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+
+  // Toggle debug with 'ctrl+d'
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'd') {
+        e.preventDefault();
+        setShowDebug(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Check for first visit
   useEffect(() => {
@@ -1284,6 +1297,54 @@ export default function NexusApp() {
       </motion.div>
 
       {/* Static HUD Layer (Above Canvas) */}
+      {/* Debug Overlay */}
+      <AnimatePresence>
+        {showDebug && (
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="fixed top-20 right-4 w-72 bg-black/80 backdrop-blur-xl border border-nexus-indigo/30 rounded-2xl p-4 z-[9999] font-mono text-[10px] text-nexus-indigo pointer-events-auto"
+          >
+            <div className="flex items-center justify-between mb-3 border-b border-nexus-indigo/20 pb-2">
+              <span className="font-bold uppercase tracking-widest flex items-center gap-2">
+                <Code size={12} /> System Debug
+              </span>
+              <button onClick={() => setShowDebug(false)} className="hover:text-white">✕</button>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="opacity-50">IDENTITY:</span>
+                <span className="text-white truncate max-w-[150px]">{user?.email || 'NOT_LOGGED_IN'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="opacity-50">ROLE:</span>
+                <span className={cn(
+                  "font-bold",
+                  currentUserRole === 'Founder' ? "text-yellow-400" : "text-nexus-indigo"
+                )}>{currentUserRole}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="opacity-50">ACTIVE_CITY:</span>
+                <span className="text-white truncate max-w-[150px]">{nodes.find(n => n.id === activeNodeId)?.name || 'NONE'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="opacity-50">DB_NODES:</span>
+                <span className="text-white">{nodes.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="opacity-50">AUTH_STATUS:</span>
+                <span className="text-white">{authLoading ? 'LOADING' : 'READY'}</span>
+              </div>
+              <div className="mt-4 pt-2 border-t border-nexus-indigo/10 text-[9px] opacity-40 leading-relaxed">
+                CTRL + D TO TOGGLE OVERLAY<br/>
+                SYNC: REAL-TIME DB ENABLED
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="absolute inset-0 pointer-events-none z-[1000]">
         <div className="pointer-events-none h-full w-full relative">
           {showCommandBar && (

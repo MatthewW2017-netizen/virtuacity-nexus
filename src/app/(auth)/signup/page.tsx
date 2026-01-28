@@ -33,13 +33,23 @@ export default function SignupPage() {
     });
 
     if (authError) {
-      setError(authError.message);
+      console.error('[Signup] Auth Error:', authError.message);
+      let userFriendlyError = authError.message;
+      
+      if (authError.message.includes("User already registered")) {
+        userFriendlyError = "This identity already exists in the Nexus. Try logging in instead.";
+      } else if (authError.message.includes("rate limit")) {
+        userFriendlyError = "System security cooldown: Please wait 5-10 minutes.";
+      }
+      
+      setError(userFriendlyError);
       setIsLoading(false);
       return;
     }
 
     if (authData.user) {
-      // Create profile in the public 'profiles' table (assuming it exists)
+      console.log('[Signup] Success - Identity Created:', authData.user.email);
+      // Create profile in the public 'profiles' table
       const { error: profileError } = await supabase
         .from('profiles')
         .insert([
@@ -52,11 +62,17 @@ export default function SignupPage() {
         ]);
 
       if (profileError) {
-        console.error("Error creating profile:", profileError.message);
-        // We don't block here because the user is technically signed up
+        console.error("[Signup] Profile Creation Error:", profileError.message);
+        // We don't block because auth succeeded
       }
 
-      router.push("/studio-os");
+      // Check if email confirmation is required (Supabase default is usually true)
+      if (authData.session) {
+        router.push("/studio-os");
+      } else {
+        setError("Identity initialization complete! Please check your Outlook email to confirm your connection.");
+        setIsLoading(false);
+      }
     }
   };
 

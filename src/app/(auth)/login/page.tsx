@@ -25,10 +25,23 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setError(error.message);
+      console.error('[Login] Error:', error.message);
+      let userFriendlyError = error.message;
+      
+      // Friendly error mapping
+      if (error.message.includes("Email not confirmed")) {
+        userFriendlyError = "Please check your Outlook email to confirm your identity before logging in.";
+      } else if (error.message.includes("Invalid login credentials")) {
+        userFriendlyError = "Invalid email or access key. Please try again.";
+      } else if (error.message.includes("rate limit")) {
+        userFriendlyError = "System security cooldown: Please wait 5-10 minutes before trying again.";
+      }
+      
+      setError(userFriendlyError);
       setIsLoading(false);
     } else {
-      router.push("/studio-os"); // Or wherever the default entry point is
+      console.log('[Login] Success');
+      router.push("/studio-os");
     }
   };
 
