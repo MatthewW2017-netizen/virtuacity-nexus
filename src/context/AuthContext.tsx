@@ -26,9 +26,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     role: 'authenticated',
   };
 
-  const [user, setUser] = useState<User | null>(MOCK_USER);
+  const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check active sessions and sets the user
@@ -36,9 +36,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session) {
         setSession(session);
         setUser(session.user);
-      } else {
-        // Keep mock user if no real session
-        setUser(MOCK_USER);
       }
       setIsLoading(false);
     });
@@ -49,8 +46,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session.user);
       } else {
-        // Keep mock user if signed out
-        setUser(MOCK_USER);
+        setSession(null);
+        setUser(null);
       }
       setIsLoading(false);
     });
