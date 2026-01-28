@@ -39,7 +39,7 @@ export default function SignupPage() {
       if (authError.message.includes("User already registered")) {
         userFriendlyError = "This identity already exists in the Nexus. Try logging in instead.";
       } else if (authError.message.includes("rate limit")) {
-        userFriendlyError = "System security cooldown: Please wait 5-10 minutes.";
+        userFriendlyError = "Email limit reached (3 per hour on free tier). Tip: Disable 'Confirm Email' in your Supabase Auth settings to skip this.";
       }
       
       setError(userFriendlyError);
