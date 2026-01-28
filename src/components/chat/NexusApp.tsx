@@ -1396,6 +1396,17 @@ export default function NexusApp() {
                 <span className="opacity-50">AUTH_STATUS:</span>
                 <span className="text-white">{authLoading ? 'LOADING' : 'READY'}</span>
               </div>
+              <div className="flex justify-between border-t border-nexus-indigo/10 pt-2 mt-2">
+                <span className="opacity-50">DEPLOYMENT:</span>
+                <span className="text-emerald-400 font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  LIVE_SYNC
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="opacity-50">AUTO_UPDATE:</span>
+                <span className="text-white">ENABLED</span>
+              </div>
               <div className="mt-4 pt-2 border-t border-nexus-indigo/10 text-[9px] opacity-40 leading-relaxed">
                 CTRL + D TO TOGGLE OVERLAY<br/>
                 SYNC: REAL-TIME DB ENABLED
