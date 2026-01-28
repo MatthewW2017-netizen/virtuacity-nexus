@@ -30,11 +30,11 @@ export default function LoginPage() {
       
       // Friendly error mapping
       if (error.message.includes("Email not confirmed")) {
-        userFriendlyError = "Please check your Outlook email to confirm your identity before logging in.";
+        userFriendlyError = "Identity verification pending. Tip: Check your email, or disable 'Confirm Email' in Supabase Auth settings to bypass this.";
       } else if (error.message.includes("Invalid login credentials")) {
-        userFriendlyError = "Invalid email or access key. Please try again.";
+        userFriendlyError = "Invalid identity or access key. Please verify your credentials.";
       } else if (error.message.includes("rate limit")) {
-        userFriendlyError = "System security cooldown: Please wait 5-10 minutes before trying again.";
+        userFriendlyError = "Rate limit reached. Tip: Disable 'Confirm Email' in Supabase to skip verification limits.";
       }
       
       setError(userFriendlyError);
