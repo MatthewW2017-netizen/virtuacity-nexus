@@ -11,8 +11,33 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const router = useRouter();
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      setError("Please enter your identity (email) first.");
+      return;
+    }
+    
+    setIsResending(true);
+    setError(null);
+    setSuccess(null);
+
+    const { error: resendError } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+    });
+
+    if (resendError) {
+      setError(`Resend failed: ${resendError.message}`);
+    } else {
+      setSuccess("New verification link transmitted. Check your Outlook.");
+    }
+    setIsResending(false);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,13 +122,33 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <motion.p 
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 p-3 rounded-lg"
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-medium leading-relaxed"
             >
               {error}
-            </motion.p>
+              {error.includes("Identity verification pending") && (
+                <button 
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={isResending}
+                  className="block mt-2 text-nexus-indigo hover:underline font-bold disabled:opacity-50"
+                >
+                  {isResending ? "Retransmitting..." : "Resend Verification Link"}
+                </button>
+              )}
+            </motion.div>
+          )}
+
+          {success && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-medium"
+            >
+              {success}
+            </motion.div>
           )}
 
           <button
