@@ -14,18 +14,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // MOCK USER FOR BYPASSING LOGIN
-  const MOCK_USER: any = {
-    id: '1',
-    email: 'founder@nexus.io',
-    user_metadata: {
-      username: 'founder',
-      full_name: 'Matthew',
-    },
-    aud: 'authenticated',
-    role: 'authenticated',
-  };
-
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);

@@ -17,6 +17,7 @@ import { OnboardingFlow } from "./OnboardingFlow";
 import { CreateCityModal } from "./CreateCityModal";
 import { useAuth } from "@/context/AuthContext";
 import { dataService } from "@/lib/dataService";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { 
   Command as CommandIcon, Zap, Layout, Users, Box, Sparkles, Cpu, 
@@ -97,7 +98,16 @@ const INITIAL_SPACES: Record<Space['id'], Space> = {
 };
 
 export default function NexusApp() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+
+  // Redirect if not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, authLoading, router]);
+
   const [activeSpaceId, setActiveSpaceId] = useState<Space['id']>('social');
   const [isAetheryxActive, setIsAetheryxActive] = useState(false);
   const [aetheryxStatus, setAetheryxStatus] = useState("Idle");
