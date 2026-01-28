@@ -17,6 +17,7 @@ import { OnboardingFlow } from "./OnboardingFlow";
 import { CreateCityModal } from "./CreateCityModal";
 import { useAuth } from "@/context/AuthContext";
 import { dataService } from "@/lib/dataService";
+import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { 
@@ -119,7 +120,7 @@ export default function NexusApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [showCommandBar, setShowCommandBar] = useState(true);
 
-  // Fetch cities from Supabase
+  // Fetch cities from Supabase and subscribe to updates
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
@@ -130,6 +131,56 @@ export default function NexusApp() {
       setIsLoading(false);
     }
     loadData();
+
+    // Real-time subscription for city updates
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cities'
+        },
+        async (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newNode = payload.new as any;
+            // Fetch districts and streams for the new city
+            const { data: districts } = await supabase.from('districts').select('*').eq('city_id', newNode.id);
+            const { data: streams } = await supabase.from('streams').select('*').eq('node_id', newNode.id);
+            
+            const mappedNode: Node = {
+              ...newNode,
+              hexColor: newNode.hex_color,
+              ownerId: newNode.owner_id,
+              districts: districts || [],
+              streams: streams || [],
+              activeModules: newNode.active_modules || [],
+              orbitingStreams: streams?.map((s: any) => s.id) || []
+            };
+            setNodes(prev => [...prev, mappedNode]);
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedNode = payload.new as any;
+            setNodes(prev => prev.map(node => 
+              node.id === updatedNode.id 
+                ? { 
+                    ...node, 
+                    ...updatedNode, 
+                    hexColor: updatedNode.hex_color,
+                    ownerId: updatedNode.owner_id 
+                  } 
+                : node
+            ));
+          } else if (payload.eventType === 'DELETE') {
+            setNodes(prev => prev.filter(node => node.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const [notifications, setNotifications] = useState<{id: string, message: string, type: 'info' | 'alert'}[]>([]);
@@ -140,7 +191,7 @@ export default function NexusApp() {
     const activeNode = nodes.find(n => n.id === activeNodeId);
     
     // If the user is the creator of the city, they are the FOUNDER
-    if (activeNode?.owner_id === user.id) {
+    if (activeNode?.ownerId === user.id) {
       return 'Founder';
     }
 
@@ -351,6 +402,32 @@ export default function NexusApp() {
       addNotification(`Stream #${name} stabilized in city grid.`, 'info');
     } else {
       addNotification("Failed to stabilize stream frequency.", 'alert');
+    }
+  };
+
+  const handleUpdateCity = async (cityId: string, updates: Partial<Node>) => {
+    const success = await dataService.updateCity(cityId, updates);
+    if (success) {
+      setNodes(prev => prev.map(node => 
+        node.id === cityId ? { ...node, ...updates } : node
+      ));
+      addNotification("Civilization core updated successfully.", 'info');
+    } else {
+      addNotification("Failed to update civilization core.", 'alert');
+    }
+  };
+
+  const handleCreateDistrict = async (cityId: string, districtData: Partial<District>) => {
+    const newDistrict = await dataService.createDistrict(cityId, districtData);
+    if (newDistrict) {
+      setNodes(prev => prev.map(node => 
+        node.id === cityId 
+          ? { ...node, districts: [...(node.districts || []), newDistrict] }
+          : node
+      ));
+      addNotification(`District ${newDistrict.name} constructed.`, 'info');
+    } else {
+      addNotification("Failed to construct district.", 'alert');
     }
   };
 
@@ -1064,35 +1141,18 @@ export default function NexusApp() {
          currentUserRole={currentUserRole}
        />
      );
-     if (panel.type === 'city-browser') return <CityBrowserPanel nodes={nodes} currentUserRole={currentUserRole} onJoin={handleJoinDistrict} canvasPos={canvasPos} onCreateStream={(cityId, name) => {
-       const newStream: Stream = {
-         id: `s_${Date.now()}`,
-         name,
-         type: 'district-stream',
-         nodeId: cityId,
-         lastActivityAt: new Date().toISOString(),
-         modules: []
-       };
-
-       setNodes(prev => prev.map(n => {
-         if (n.id === cityId) {
-           return {
-             ...n,
-             streams: [...n.streams, newStream],
-             orbitingStreams: [...(n.orbitingStreams || []), newStream.id]
-           };
-         }
-         return n;
-       }));
-
-       addNotification(`New stream #${name} initialized in city core.`, 'info');
-       
-       // Trigger Pulse Effect
-       setNodes(prev => prev.map(n => n.id === cityId ? { ...n, isPulsing: true } : n));
-       setTimeout(() => {
-         setNodes(prev => prev.map(n => n.id === cityId ? { ...n, isPulsing: false } : n));
-       }, 3000);
-     }} />;
+     if (panel.type === 'city-browser') return (
+      <CityBrowserPanel 
+        nodes={nodes} 
+        currentUserRole={currentUserRole} 
+        onJoin={handleJoinDistrict} 
+        canvasPos={canvasPos} 
+        onCreateStream={handleCreateStream}
+        onUpdateCity={handleUpdateCity}
+        onCreateDistrict={handleCreateDistrict}
+        onCreateCity={() => setShowCreateCityModal(true)} 
+      />
+    );
      if (panel.type === 'dev-grid') return (
       <DevGridPanel 
         nodes={nodes} 

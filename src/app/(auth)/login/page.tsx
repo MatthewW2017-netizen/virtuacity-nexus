@@ -40,7 +40,6 @@ export default function LoginPage() {
       setError(userFriendlyError);
       setIsLoading(false);
     } else {
-      console.log('[Login] Success');
       router.push("/studio-os");
     }
   };

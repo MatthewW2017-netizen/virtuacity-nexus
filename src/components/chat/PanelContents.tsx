@@ -658,24 +658,59 @@ export const CityScanner = ({ color, name, onComplete }: { color: string, name: 
   );
 };
 
-export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStream, onCreateCity, canvasPos }: { 
+export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStream, onUpdateCity, onCreateDistrict, onCreateCity, canvasPos }: { 
   nodes: Node[], 
   currentUserRole?: 'Architect' | 'Founder' | 'Citizen',
   onJoin: (id: string, districtId?: string, streamId?: string) => void,
   onCreateStream?: (cityId: string, name: string) => void,
+  onUpdateCity?: (cityId: string, updates: Partial<Node>) => void,
+  onCreateDistrict?: (cityId: string, updates: Partial<District>) => void,
   onCreateCity?: () => void,
   canvasPos?: { x: number, y: number, zoom: number }
 }) => {
   const [selectedCityId, setSelectedCityId] = React.useState<string | null>(null);
   const [scanningCityId, setScanningCityId] = React.useState<string | null>(null);
   const [isCreatingStream, setIsCreatingStream] = React.useState(false);
+  const [isCreatingDistrict, setIsCreatingDistrict] = React.useState(false);
+  const [isEditingCity, setIsEditingCity] = React.useState(false);
   const [newStreamName, setNewStreamName] = React.useState("");
+  const [newDistrictName, setNewDistrictName] = React.useState("");
+  const [newDistrictType, setNewDistrictType] = React.useState<District['type']>('neural');
   const [viewMode, setViewMode] = React.useState<'grid' | 'list' | 'spatial'>('grid');
   
+  // Edit form state
+  const [editName, setEditName] = React.useState("");
+  const [editCategory, setEditCategory] = React.useState<Node['category']>('Social');
+  const [editAtmosphere, setEditAtmosphere] = React.useState<Node['atmosphere']>('Cyberpunk');
+  const [editColor, setEditColor] = React.useState("");
+
   const selectedCity = nodes.find(n => n.id === selectedCityId);
+
+  // Initialize edit form when city is selected or edit mode toggled
+  React.useEffect(() => {
+    if (selectedCity && isEditingCity) {
+      setEditName(selectedCity.name);
+      setEditCategory(selectedCity.category || 'Social');
+      setEditAtmosphere(selectedCity.atmosphere || 'Cyberpunk');
+      setEditColor(selectedCity.hexColor || "#4B3FE2");
+    }
+  }, [selectedCity, isEditingCity]);
+
   const scanningCity = nodes.find(n => n.id === scanningCityId);
 
   const canManage = currentUserRole === 'Architect' || currentUserRole === 'Founder';
+
+  const handleUpdateCity = () => {
+    if (selectedCityId && onUpdateCity) {
+      onUpdateCity(selectedCityId, {
+        name: editName,
+        category: editCategory,
+        atmosphere: editAtmosphere,
+        hexColor: editColor
+      });
+      setIsEditingCity(false);
+    }
+  };
 
   const handleSelectCity = (id: string) => {
     setScanningCityId(id);
@@ -691,6 +726,18 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
       onCreateStream(selectedCityId, newStreamName);
       setNewStreamName("");
       setIsCreatingStream(false);
+    }
+  };
+
+  const handleCreateDistrict = () => {
+    if (selectedCityId && newDistrictName && onCreateDistrict && canManage) {
+      onCreateDistrict(selectedCityId, {
+        name: newDistrictName,
+        type: newDistrictType,
+        occupancy: 0
+      });
+      setNewDistrictName("");
+      setIsCreatingDistrict(false);
     }
   };
 
@@ -768,16 +815,159 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
             >
               Synchronize
             </button>
+            {canManage && (
+              <button
+                onClick={() => setIsEditingCity(!isEditingCity)}
+                className={cn(
+                  "ml-4 p-5 rounded-2xl border transition-all",
+                  isEditingCity 
+                    ? "bg-white text-black border-white" 
+                    : "bg-white/5 text-white border-white/10 hover:bg-white/10"
+                )}
+              >
+                <Settings size={20} className={isEditingCity ? "animate-spin-slow" : ""} />
+              </button>
+            )}
           </div>
         </div>
 
+        {isEditingCity && (
+          <div className="p-8 bg-nexus-indigo/5 border-b border-nexus-indigo/20 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="space-y-2">
+                <label className="text-[8px] font-black text-nexus-indigo uppercase tracking-widest">Civilization Name</label>
+                <input 
+                  type="text" 
+                  value={editName} 
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full bg-black/40 border border-nexus-indigo/30 rounded-xl px-4 py-3 text-white text-[12px] font-bold uppercase tracking-wider outline-none focus:border-nexus-indigo"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[8px] font-black text-nexus-indigo uppercase tracking-widest">Category</label>
+                <select 
+                  value={editCategory} 
+                  onChange={(e) => setEditCategory(e.target.value as any)}
+                  className="w-full bg-black/40 border border-nexus-indigo/30 rounded-xl px-4 py-3 text-white text-[12px] font-bold uppercase tracking-wider outline-none focus:border-nexus-indigo"
+                >
+                  {['Social', 'Tactical', 'Neural', 'Creative', 'Industrial'].map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[8px] font-black text-nexus-indigo uppercase tracking-widest">Atmosphere</label>
+                <select 
+                  value={editAtmosphere} 
+                  onChange={(e) => setEditAtmosphere(e.target.value as any)}
+                  className="w-full bg-black/40 border border-nexus-indigo/30 rounded-xl px-4 py-3 text-white text-[12px] font-bold uppercase tracking-wider outline-none focus:border-nexus-indigo"
+                >
+                  {['Cyberpunk', 'Solarpunk', 'Brutalist', 'Holographic', 'Minimalist'].map(atm => (
+                    <option key={atm} value={atm}>{atm}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[8px] font-black text-nexus-indigo uppercase tracking-widest">Primary Glow</label>
+                <div className="flex items-center space-x-3">
+                  <input 
+                    type="color" 
+                    value={editColor} 
+                    onChange={(e) => setEditColor(e.target.value)}
+                    className="w-12 h-12 bg-transparent border-none outline-none cursor-pointer"
+                  />
+                  <input 
+                    type="text" 
+                    value={editColor} 
+                    onChange={(e) => setEditColor(e.target.value)}
+                    className="flex-1 bg-black/40 border border-nexus-indigo/30 rounded-xl px-4 py-3 text-white text-[10px] font-mono outline-none focus:border-nexus-indigo"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-4">
+              <button 
+                onClick={() => setIsEditingCity(false)}
+                className="px-6 py-3 rounded-xl bg-white/5 text-gray-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all"
+              >
+                Discard Changes
+              </button>
+              <button 
+                onClick={handleUpdateCity}
+                className="px-8 py-3 rounded-xl bg-nexus-indigo text-white text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all shadow-lg"
+              >
+                Update Civilization Core
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 p-8 overflow-y-auto no-scrollbar grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-6">
-            <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] mb-4 flex items-center">
-              <Layers size={14} className="mr-3 text-nexus-indigo" />
-              Civilization Districts
-            </h4>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] flex items-center">
+                <Layers size={14} className="mr-3 text-nexus-indigo" />
+                Civilization Districts
+              </h4>
+              {canManage && !isCreatingDistrict && (
+                <button 
+                  onClick={() => setIsCreatingDistrict(true)}
+                  className="p-1.5 rounded-lg bg-nexus-indigo/10 text-nexus-indigo hover:bg-nexus-indigo hover:text-white transition-all"
+                >
+                  <Plus size={14} />
+                </button>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 gap-4">
+              {isCreatingDistrict && (
+                <div className="p-6 rounded-3xl bg-white/5 border border-nexus-indigo/30 space-y-4 shadow-2xl">
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-3">
+                      <BoxIcon size={18} className="text-nexus-indigo" />
+                      <input 
+                        autoFocus
+                        type="text" 
+                        placeholder="District Name" 
+                        value={newDistrictName}
+                        onChange={(e) => setNewDistrictName(e.target.value)}
+                        className="bg-transparent border-none outline-none text-[14px] text-white font-black uppercase tracking-[0.2em] w-full placeholder:text-gray-700"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['neural', 'tactical', 'creative', 'commercial', 'residential', 'industrial'].map(type => (
+                        <button
+                          key={type}
+                          onClick={() => setNewDistrictType(type as any)}
+                          className={cn(
+                            "px-3 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest border transition-all",
+                            newDistrictType === type 
+                              ? "bg-nexus-indigo text-white border-nexus-indigo" 
+                              : "bg-white/5 text-gray-500 border-white/10 hover:border-white/20"
+                          )}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3 pt-2">
+                    <button 
+                      onClick={handleCreateDistrict}
+                      className="flex-1 py-3 rounded-xl bg-nexus-indigo text-white text-[11px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all shadow-lg"
+                    >
+                      Construct District
+                    </button>
+                    <button 
+                      onClick={() => setIsCreatingDistrict(false)}
+                      className="px-6 py-3 rounded-xl bg-white/5 text-gray-500 text-[11px] font-black uppercase tracking-widest hover:text-white transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {selectedCity.districts?.map(district => (
                 <motion.div
                   key={district.id}
@@ -822,10 +1012,20 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
           </div>
 
           <div className="space-y-6">
-            <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] mb-4 flex items-center">
-              <Activity size={14} className="mr-3 text-emerald-500" />
-              Atmospheric Streams
-            </h4>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] flex items-center">
+                <Activity size={14} className="mr-3 text-emerald-500" />
+                Atmospheric Streams
+              </h4>
+              {canManage && !isCreatingStream && (
+                <button 
+                  onClick={() => setIsCreatingStream(true)}
+                  className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all"
+                >
+                  <Plus size={14} />
+                </button>
+              )}
+            </div>
             <div className="grid grid-cols-1 gap-4">
               {selectedCity.orbitingStreams?.map(streamId => {
                 const stream = selectedCity.streams.find(s => s.id === streamId);

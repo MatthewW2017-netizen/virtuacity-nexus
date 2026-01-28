@@ -27,7 +27,6 @@ export default function EarlyAccessPage() {
       if (process.env.NEXT_PUBLIC_SUPABASE_URL === 'https://placeholder.supabase.co' || !process.env.NEXT_PUBLIC_SUPABASE_URL) {
         // Simulation for demo purposes if keys aren't set
         await new Promise((resolve) => setTimeout(resolve, 1500));
-        console.log("Form submitted (simulated):", formData);
         setStatus("success");
         return;
       }

@@ -19,8 +19,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    console.log('[AuthContext] Initializing...');
-    
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
@@ -28,25 +26,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       if (session) {
-        console.log('[AuthContext] Session found for:', session.user.email);
         setSession(session);
         setUser(session.user);
-      } else {
-        console.log('[AuthContext] No active session.');
       }
       setIsLoading(false);
     });
 
     // Listen for changes on auth state (logged in, signed out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[AuthContext] Auth State Change:', event);
-      
       if (session) {
-        console.log('[AuthContext] User Identity:', session.user.email);
         setSession(session);
         setUser(session.user);
       } else {
-        console.log('[AuthContext] No user identity detected.');
         setSession(null);
         setUser(null);
       }

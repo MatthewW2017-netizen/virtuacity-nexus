@@ -19,6 +19,7 @@ export const dataService = {
     return (cities || []).map(city => ({
       ...city,
       hexColor: city.hex_color,
+      ownerId: city.owner_id,
       orbitingStreams: city.streams?.map((s: any) => s.id) || [],
       activeModules: city.active_modules || [],
       districts: city.districts || [],
@@ -64,11 +65,51 @@ export const dataService = {
     return {
       ...city,
       hexColor: city.hex_color,
+      ownerId: city.owner_id,
       districts: districts || [],
       streams: [],
       activeModules: [],
       orbitingStreams: []
     };
+  },
+
+  async updateCity(cityId: string, updates: Partial<Node>): Promise<boolean> {
+    const { error } = await supabase
+      .from('cities')
+      .update({
+        name: updates.name,
+        category: updates.category,
+        atmosphere: updates.atmosphere,
+        hex_color: updates.hexColor,
+        icon: updates.icon,
+        status: updates.status
+      })
+      .eq('id', cityId);
+
+    if (error) {
+      console.error('Error updating city:', error);
+      return false;
+    }
+    return true;
+  },
+
+  async createDistrict(cityId: string, districtData: Partial<District>): Promise<District | null> {
+    const { data, error } = await supabase
+      .from('districts')
+      .insert({
+        city_id: cityId,
+        name: districtData.name,
+        type: districtData.type || 'neural',
+        occupancy: 0
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating district:', error);
+      return null;
+    }
+    return data;
   },
 
   async updateCityLogic(cityId: string, logic: any) {

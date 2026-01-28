@@ -48,7 +48,6 @@ export default function SignupPage() {
     }
 
     if (authData.user) {
-      console.log('[Signup] Success - Identity Created:', authData.user.email);
       // Create profile in the public 'profiles' table
       const { error: profileError } = await supabase
         .from('profiles')
