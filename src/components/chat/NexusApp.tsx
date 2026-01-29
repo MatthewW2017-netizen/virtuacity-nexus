@@ -227,7 +227,7 @@ export default function NexusApp() {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('connecting');
   const [studioBots, setStudioBots] = useState<any[]>([]);
 
-  const CURRENT_VERSION = "2.0.6"; // Increment version for "What's New" check
+  const CURRENT_VERSION = "3.0.0"; // Increment version for "What's New" check
 
   // Role Logic
   const activeNode = useMemo(() => {
@@ -1742,7 +1742,6 @@ export default function NexusApp() {
 
       {/* Static HUD Layer (Above Canvas) */}
       <DiagnosticOverlay />
-      <AnimatePresence>
 
       <div className="absolute inset-0 pointer-events-none z-[1000]">
         <div className="pointer-events-none h-full w-full relative">
@@ -1755,7 +1754,7 @@ export default function NexusApp() {
           <div className="absolute top-8 left-10 flex flex-col space-y-1.5 opacity-80">
             <div className="flex items-center space-x-2">
               <div className="text-[10px] font-black text-white uppercase tracking-[0.4em] flex items-center gap-2">
-                Nexus Grid OS <span className="text-nexus-cyan">v2.0.6-STABLE</span>
+                Nexus Grid OS <span className="text-nexus-cyan">v3.0.0-PUBLIC</span>
                 {currentUserRole === 'Founder' && (
                   <motion.span 
                     initial={{ opacity: 0, x: -10 }}

@@ -231,5 +231,35 @@ export const dataService = {
     if (error) {
       console.error('Error creating system update:', error);
     }
+  },
+
+  async fetchStudioState(userId: string) {
+    const { data, error } = await supabase
+      .from('studio_state')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      console.error('Error fetching studio state:', error);
+      return null;
+    }
+    return data;
+  },
+
+  async saveStudioState(userId: string, state: any) {
+    const { error } = await supabase
+      .from('studio_state')
+      .upsert({
+        user_id: userId,
+        ...state,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+
+    if (error) {
+      console.error('Error saving studio state:', error);
+      return false;
+    }
+    return true;
   }
 };

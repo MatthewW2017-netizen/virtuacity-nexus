@@ -27,6 +27,21 @@ interface UpdateItem {
 const STATIC_UPDATES: UpdateItem[] = [
   {
     type: "feature",
+    title: "v3.0.0 Public Launch",
+    description: "The VirtuaCity Nexus is now officially live. All systems operational for public access."
+  },
+  {
+    type: "feature",
+    title: "Persistent Neural State",
+    description: "Bot Workshop and Role Matrix configurations now persist across sessions using the studio_state protocol."
+  },
+  {
+    type: "fix",
+    title: "Hydration Stability",
+    description: "Resolved critical client-side exceptions during initialization for a smoother landing experience."
+  },
+  {
+    type: "feature",
     title: "Neural Bot Workshop",
     description: "The Bot Builder is now fully operational. Founders can construct and deploy neural units directly from the Studio OS."
   },
@@ -135,7 +150,7 @@ export const UpdatesPanel: React.FC<UpdatesPanelProps> = ({ onClose }) => {
               <h2 className="text-xl font-bold tracking-tight">SYSTEM UPDATE</h2>
               <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500">
                 <Terminal size={10} />
-                <span>VERSION 2.0.6 // BUILD_SUCCESS</span>
+                <span>VERSION 3.0.0 // PUBLIC_LAUNCH</span>
               </div>
             </div>
           </div>
