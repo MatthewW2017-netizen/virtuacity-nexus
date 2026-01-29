@@ -181,7 +181,7 @@ export default function StudioOSPage() {
 
     const timer = setTimeout(saveState, 2000);
     return () => clearTimeout(timer);
-  }, [projects, assets, bots, team, user, isClockedIn, clockTime, aiMessages]);
+  }, [projects, assets, bots, team, user, isClockedIn, clockTime, aiMessages, customRoles]);
 
   if (!isMounted) return null;
 
