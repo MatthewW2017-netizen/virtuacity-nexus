@@ -504,9 +504,9 @@ export const ProfilePanel = ({
   const activeStats = React.useMemo(() => {
     if (!activeNode) return { population: 0, stability: 99.9, growth: 1.2 };
     return {
-      population: activeNode.population,
+      population: activeNode.population || 0,
       stability: activeNode.status === 'Stable' ? 99.9 : activeNode.status === 'Critical' ? 42.1 : 85.4,
-      growth: activeNode.population > 1000 ? 4.2 : 1.8
+      growth: (activeNode.population || 0) > 1000 ? 4.2 : 1.8
     };
   }, [activeNode]);
 
@@ -3048,7 +3048,7 @@ export const NodeExplorerPanel = ({
                     </span>
                     <div className="flex items-center space-x-1">
                       <div className="w-1 h-1 rounded-full bg-emerald-500" />
-                      <span className="text-[8px] font-bold text-emerald-500/70">{Math.floor(node.population / 10)} active</span>
+                      <span className="text-[8px] font-bold text-emerald-500/70">{Math.floor((node.population || 0) / 10)} active</span>
                     </div>
                   </div>
                   <div className="text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-1">

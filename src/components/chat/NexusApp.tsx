@@ -26,78 +26,6 @@ import {
   Folder, Wrench, Shield, Globe, Code, ShieldAlert, Activity, Layers
 } from "lucide-react";
 
-const INITIAL_SPACES: Record<Space['id'], Space> = {
-  social: {
-    id: 'social',
-    name: 'Social Space',
-    panels: [
-      { id: "shared-explorer", type: "node-explorer", title: "Node Explorer", x: 60, y: 160, width: 320, height: 550, zIndex: 10, data: { nodes } },
-      { id: "shared-chat", type: "chat", title: "Data Stream // Central", x: 420, y: 140, width: 500, height: 700, zIndex: 20, data: { streamId: "s1", nodes } }
-    ]
-  },
-  'city-browser': {
-    id: 'city-browser',
-    name: 'City Browser',
-    panels: [
-      { id: "shared-browser", type: "city-browser", title: "City Directory // Global", x: 60, y: 140, width: 900, height: 600, zIndex: 10, data: { nodes } }
-    ]
-  },
-  studio: {
-    id: 'studio',
-    name: 'Creative Studio',
-    panels: [
-      { id: "shared-forge", type: "bot-forge", title: "AETHERYX Bot Forge", x: 100, y: 100, width: 400, height: 500, zIndex: 10 },
-      { id: "shared-chat", type: "chat", title: "Project Stream", x: 550, y: 100, width: 600, height: 700, zIndex: 20, data: { streamId: "s3" } }
-    ]
-  },
-  creator: {
-    id: 'creator',
-    name: 'Creator Workspace',
-    panels: [
-      { id: "shared-assets", type: "asset-library", title: "Asset Library", x: 60, y: 120, width: 350, height: 600, zIndex: 10 },
-      { id: "shared-tools", type: "creator-tools", title: "Creator Tools", x: 440, y: 120, width: 450, height: 500, zIndex: 20 },
-      { id: "shared-chat", type: "chat", title: "Dev Log // Synthesis", x: 920, y: 120, width: 400, height: 700, zIndex: 5, data: { streamId: "s2" } }
-    ]
-  },
-  ai: {
-    id: 'ai',
-    name: 'AI Research',
-    panels: [
-      { id: "shared-graph", type: "neural-graph", title: "AETHERYX Core // Neural Graph", x: 100, y: 100, width: 500, height: 600, zIndex: 10 },
-      { id: "shared-chat", type: "chat", title: "Neural Stream", x: 650, y: 100, width: 500, height: 700, zIndex: 20, data: { streamId: "s2" } }
-    ]
-  },
-  gaming: { 
-    id: 'gaming', 
-    name: 'Gaming Zone', 
-    panels: [
-      { id: "shared-map", type: "tactical-map", title: "Tactical Map // Sector 7", x: 60, y: 100, width: 450, height: 600, zIndex: 10 },
-      { id: "shared-chat", type: "chat", title: "Tactical Stream", x: 550, y: 100, width: 600, height: 800, zIndex: 5, data: { streamId: "s1" } }
-    ] 
-  },
-  personal: {
-    id: 'personal',
-    name: 'Identity Core',
-    panels: [
-      { id: "shared-profile", type: "profile", title: "Identity Core // Profile", x: 100, y: 100, width: 450, height: 700, zIndex: 10 },
-      { id: "shared-chat", type: "chat", title: "Personal Stream", x: 580, y: 100, width: 500, height: 700, zIndex: 5, data: { streamId: "s3" } }
-    ]
-  },
-  'dev-grid': {
-    id: 'dev-grid',
-    name: 'Nexus Dev Grid',
-    panels: [
-      { id: "shared-dev-grid", type: "dev-grid", title: "Dev Grid // Logic Builder", x: 60, y: 140, width: 1000, height: 700, zIndex: 10 }
-    ]
-  },
-  'governance': {
-    id: 'governance',
-    name: 'Trust & Safety',
-    panels: [
-      { id: "trust-portal", type: "trust-safety", title: "Trust & Safety Portal", x: 60, y: 120, width: 1000, height: 750, zIndex: 10 }
-    ]
-  }
-};
 
 export default function NexusApp() {
   const { user, isLoading: authLoading } = useAuth();
@@ -121,7 +49,7 @@ export default function NexusApp() {
   const [showCreateCityModal, setShowCreateCityModal] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
   const [notifications, setNotifications] = useState<{id: string, message: string, type: 'info' | 'alert'}[]>([]);
-  const [customSpaces, setCustomSpaces] = useState<Record<Space['id'], Space>>({});
+  const [customSpaces, setCustomSpaces] = useState<Record<string, Space>>({});
   const [isAetheryxActive, setIsAetheryxActive] = useState(false);
   const [aetheryxStatus, setAetheryxStatus] = useState("Idle");
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('connecting');
@@ -192,7 +120,7 @@ export default function NexusApp() {
               onCreateDistrict: async (cityId: string, districtData: Partial<District>) => {
                 const newDistrict = await dataService.createDistrict(cityId, districtData);
                 if (newDistrict) {
-                  setNodes(prev => prev.map(n => n.id === cityId ? { ...n, districts: [...n.districts, newDistrict] } : n));
+                  setNodes(prev => prev.map(n => n.id === cityId ? { ...n, districts: [...(n.districts || []), newDistrict] } : n));
                   addNotification(`District ${districtData.name} expansion complete.`, 'info');
                 }
               }
@@ -723,7 +651,6 @@ export default function NexusApp() {
     }
   };
 
-  const activeNode = nodes.find(n => n.id === activeNodeId);
   const activeStream = activeNode?.streams.find(s => s.id === activeStreamId) || activeNode?.streams[0];
   const activeStreamModules = MOCK_MODULES.filter(m => activeStream?.modules.includes(m.id));
 
@@ -800,7 +727,7 @@ export default function NexusApp() {
       </div>
 
       <div className="flex flex-col space-y-2">
-        {(Object.keys(INITIAL_SPACES) as Space['id'][]).map((spaceId) => {
+        {(Object.keys(spaces) as Space['id'][]).map((spaceId) => {
           const Icon = spaceIcons[spaceId] || Layout;
           const isActive = activeSpaceId === spaceId;
           return (
@@ -818,7 +745,7 @@ export default function NexusApp() {
               
               {/* Tooltip - Professional Style */}
               <div className="absolute left-full ml-4 px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-2xl">
-                <div className="text-[10px] font-bold text-white uppercase tracking-widest">{INITIAL_SPACES[spaceId].name}</div>
+                <div className="text-[10px] font-bold text-white uppercase tracking-widest">{spaces[spaceId].name}</div>
                 <div className="text-[8px] text-gray-500 font-medium mt-0.5">Switch to this workspace</div>
               </div>
 
@@ -1212,7 +1139,6 @@ export default function NexusApp() {
     }
 
     if (lowerCmd === "reset" || lowerCmd === "/reset") {
-      setSpaces(INITIAL_SPACES);
       addNotification("OS Environment reset to default.", 'alert');
     }
   };
@@ -1389,12 +1315,13 @@ export default function NexusApp() {
     if (panel.type === 'neural-graph') return <NeuralGraphPanel />;
     if (panel.type === 'tactical-map') return <TacticalMapPanel />;
      if (panel.type === 'profile') return (
-       <ProfilePanel 
-         user={MOCK_USERS["1"]} 
-         activeNodeId={activeNodeId}
-         currentUserRole={currentUserRole}
-       />
-     );
+        <ProfilePanel
+          user={MOCK_USERS["1"]}
+          nodes={nodes}
+          activeNodeId={activeNodeId}
+          currentUserRole={currentUserRole}
+        />
+      );
      if (panel.type === 'city-browser') return (
       <CityBrowserPanel 
         nodes={nodes} 
@@ -1469,7 +1396,7 @@ export default function NexusApp() {
     if (spaceId === activeSpaceId) return;
 
     setIsAetheryxActive(true);
-    setAetheryxStatus(`Calibrating Space: ${INITIAL_SPACES[spaceId].name.toUpperCase()}...`);
+    setAetheryxStatus(`Calibrating Space: ${spaces[spaceId].name.toUpperCase()}...`);
     setIsWarping(true);
     
     // Cinematic spatial pull-back with a slight rotation for "warp" feel
@@ -1487,7 +1414,7 @@ export default function NexusApp() {
         setAetheryxStatus("Idle");
       }, 800);
 
-      addNotification(`Environment Synced: ${INITIAL_SPACES[spaceId].name}`, 'info');
+      addNotification(`Environment Synced: ${spaces[spaceId].name}`, 'info');
     }, 600);
   };
 

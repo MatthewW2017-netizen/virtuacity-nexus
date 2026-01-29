@@ -64,7 +64,7 @@ export default function StudioOSPage() {
         .eq('owner_id', user.id)
         .limit(1);
       
-      setIsFounder(cities && cities.length > 0);
+      setIsFounder(!!(cities && cities.length > 0));
     };
 
     loadState();
