@@ -55,17 +55,17 @@ export default function LoginPage() {
       
       // Friendly error mapping
       if (error.message.includes("Email not confirmed")) {
-        userFriendlyError = "Identity verification pending. Tip: Check your email, or disable 'Confirm Email' in Supabase Auth settings to bypass this.";
+        userFriendlyError = "Identity verification pending. (Tip: Turn off 'Confirm email' in Supabase Dashboard > Auth > Settings to bypass this for now).";
       } else if (error.message.includes("Invalid login credentials")) {
         userFriendlyError = "Invalid identity or access key. Please verify your credentials.";
       } else if (error.message.includes("rate limit")) {
-        userFriendlyError = "Rate limit reached. Tip: Disable 'Confirm Email' in Supabase to skip verification limits.";
+        userFriendlyError = "Rate limit reached. (Tip: Disable 'Confirm email' in Supabase to bypass email limits).";
       }
       
       setError(userFriendlyError);
       setIsLoading(false);
     } else {
-      router.push("/studio-os");
+      router.push("/nexus");
     }
   };
 
@@ -107,7 +107,12 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-nexus-indigo/50 ml-1">Access Key (Password)</label>
+            <div className="flex justify-between items-center ml-1">
+              <label className="text-xs font-bold uppercase tracking-widest text-nexus-indigo/50">Access Key (Password)</label>
+              <Link href="/forgot-password" size="sm" className="text-[10px] uppercase tracking-widest text-nexus-indigo/40 hover:text-nexus-indigo transition-colors font-bold">
+                Forgot Key?
+              </Link>
+            </div>
             <div className="relative group">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nexus-indigo/30 group-focus-within:text-nexus-indigo transition-colors" />
               <input 

@@ -2,14 +2,13 @@
 
 import React from "react";
 import { Message, User, Stream, Node, BotModule, District } from "@/types/chat";
-import { MOCK_NODES } from "@/lib/mockData";
 import { 
   Hash, Volume2, Megaphone, Sparkles, Send, MessageSquare, Share2, 
   Layers, Cpu, Zap, Shield, Music, BarChart, Settings, Plus, Activity, 
   Search, Folder, Image as ImageIcon, FileCode, Play, Palette, 
   Box as BoxIcon, Scissors, Type, Download, Globe, Mic, CheckCircle2,
   Circle, Clock, MoreHorizontal, ExternalLink, RefreshCw,
-  Cloud, Terminal, Code, ChevronLeft, Users
+  Cloud, Terminal, Code, ChevronLeft, Users, Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { dataService } from "@/lib/dataService";
@@ -489,15 +488,28 @@ export const TacticalMapPanel = () => {
 
 export const ProfilePanel = ({ 
   user, 
+  nodes,
   activeNodeId, 
   currentUserRole 
 }: { 
   user: User, 
+  nodes: Node[],
   activeNodeId?: string, 
   currentUserRole?: 'Architect' | 'Founder' | 'Citizen' 
 }) => {
-  const activeCityName = activeNodeId ? MOCK_NODES.find(n => n.id === activeNodeId)?.name : "Nexus Central";
+  const activeCityName = activeNodeId ? nodes.find(n => n.id === activeNodeId)?.name : "Nexus Central";
+  const activeNode = nodes.find(n => n.id === activeNodeId);
   
+  // Calculate dynamic stats for the active node
+  const activeStats = React.useMemo(() => {
+    if (!activeNode) return { population: 0, stability: 99.9, growth: 1.2 };
+    return {
+      population: activeNode.population,
+      stability: activeNode.status === 'Stable' ? 99.9 : activeNode.status === 'Critical' ? 42.1 : 85.4,
+      growth: activeNode.population > 1000 ? 4.2 : 1.8
+    };
+  }, [activeNode]);
+
   return (
     <div className="p-0 h-full flex flex-col bg-black/40 overflow-hidden">
       <div className="relative h-48 bg-gradient-to-br from-nexus-indigo/40 to-purple-900/40">
@@ -513,7 +525,12 @@ export const ProfilePanel = ({
             <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 border-4 border-[#050506]" />
           </div>
           <div className="mb-4">
-            <h3 className="text-2xl font-black text-white uppercase tracking-tighter">{user.name}</h3>
+            <h3 className="text-2xl font-black text-white uppercase tracking-tighter flex items-center gap-3">
+              {user.name}
+              {currentUserRole === 'Founder' && (
+                <span className="px-2 py-0.5 bg-amber-500/20 text-amber-500 border border-amber-500/30 rounded text-[10px] font-black tracking-widest">FOUNDER</span>
+              )}
+            </h3>
             <p className="text-[10px] text-nexus-indigo font-black uppercase tracking-[0.3em]">@{user.username} // IDENTITY_VERIFIED</p>
           </div>
         </div>
@@ -541,30 +558,62 @@ export const ProfilePanel = ({
 
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: 'Reputation', value: '4.8k', color: 'text-blue-400' },
-            { label: 'Nodes', value: '12', color: 'text-purple-400' },
-            { label: 'Synthesis', value: '98%', color: 'text-emerald-400' },
+            { label: 'Reputation', value: currentUserRole === 'Founder' ? '∞' : '4.8k', color: currentUserRole === 'Founder' ? 'text-amber-400' : 'text-blue-400' },
+            { label: 'Nodes', value: currentUserRole === 'Founder' ? 'GLOBAL' : nodes.length.toString(), color: currentUserRole === 'Founder' ? 'text-amber-400' : 'text-purple-400' },
+            { label: 'Synthesis', value: currentUserRole === 'Founder' ? '100%' : `${activeStats.stability}%`, color: currentUserRole === 'Founder' ? 'text-amber-400' : 'text-emerald-400' },
           ].map((stat, i) => (
-            <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-4 text-center">
+            <div key={i} className={cn(
+              "bg-white/5 border rounded-2xl p-4 text-center transition-all",
+              currentUserRole === 'Founder' ? "border-amber-500/20 bg-amber-500/5 shadow-[0_0_15px_rgba(245,158,11,0.05)]" : "border-white/5"
+            )}>
               <div className={cn("text-lg font-black", stat.color)}>{stat.value}</div>
               <div className="text-[8px] text-gray-500 font-bold uppercase tracking-widest mt-1">{stat.label}</div>
             </div>
           ))}
         </div>
 
+        {currentUserRole === 'Founder' && (
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.4em] flex items-center">
+              <Shield size={12} className="mr-2" />
+              Founder Privileges
+            </h4>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                "Global Node Access",
+                "Root AI Authority",
+                "Economic Control",
+                "Architect Override"
+              ].map((priv, i) => (
+                <div key={i} className="flex items-center space-x-2 p-2 rounded-lg bg-amber-500/5 border border-amber-500/10 text-[8px] text-amber-200/60 font-black uppercase tracking-widest">
+                  <CheckCircle2 size={8} className="text-amber-500" />
+                  <span>{priv}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-4">
           <h4 className="text-[10px] font-black text-white uppercase tracking-[0.4em] flex items-center">
             <Activity size={12} className="mr-2 text-nexus-indigo" />
-            Neural Activity
+            {currentUserRole === 'Founder' ? 'System Oversight' : 'Neural Activity'}
           </h4>
           <div className="space-y-2">
-            {[
+            {(currentUserRole === 'Founder' ? [
+              "System-wide Integrity Check: OK",
+              "Studio OS: Operational",
+              "Global Synapse Load: Normal",
+            ] : [
               "Synchronized with Node: AI Research",
               "Modified Logic Flow in Creator Workspace",
               "New Asset Uploaded: Nexus_Core_v2.obj",
-            ].map((activity, i) => (
-              <div key={i} className="flex items-center space-x-3 p-3 rounded-xl bg-white/5 border border-white/5 text-[10px] text-gray-400 font-medium">
-                <div className="w-1.5 h-1.5 rounded-full bg-nexus-indigo/50" />
+            ]).map((activity, i) => (
+              <div key={i} className={cn(
+                "flex items-center space-x-3 p-3 rounded-xl border text-[10px] font-medium",
+                currentUserRole === 'Founder' ? "bg-amber-500/5 border-amber-500/10 text-amber-200/60" : "bg-white/5 border-white/5 text-gray-400"
+              )}>
+                <div className={cn("w-1.5 h-1.5 rounded-full", currentUserRole === 'Founder' ? "bg-amber-500" : "bg-nexus-indigo/50")} />
                 <span>{activity}</span>
               </div>
             ))}
@@ -658,7 +707,7 @@ export const CityScanner = ({ color, name, onComplete }: { color: string, name: 
   );
 };
 
-export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStream, onUpdateCity, onCreateDistrict, onCreateCity, canvasPos }: { 
+export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStream, onUpdateCity, onCreateDistrict, onCreateCity, canvasPos, currentUserId }: { 
   nodes: Node[], 
   currentUserRole?: 'Architect' | 'Founder' | 'Citizen',
   onJoin: (id: string, districtId?: string, streamId?: string) => void,
@@ -666,7 +715,8 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
   onUpdateCity?: (cityId: string, updates: Partial<Node>) => void,
   onCreateDistrict?: (cityId: string, updates: Partial<District>) => void,
   onCreateCity?: () => void,
-  canvasPos?: { x: number, y: number, zoom: number }
+  canvasPos?: { x: number, y: number, zoom: number },
+  currentUserId?: string
 }) => {
   const [selectedCityId, setSelectedCityId] = React.useState<string | null>(null);
   const [scanningCityId, setScanningCityId] = React.useState<string | null>(null);
@@ -698,7 +748,9 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
 
   const scanningCity = nodes.find(n => n.id === scanningCityId);
 
-  const canManage = currentUserRole === 'Architect' || currentUserRole === 'Founder';
+  // Founder logic: Can manage if they are the owner or have the Architect role
+  const isOwner = selectedCity?.ownerId === currentUserId;
+  const canManage = currentUserRole === 'Architect' || currentUserRole === 'Founder' || isOwner;
 
   const handleUpdateCity = () => {
     if (selectedCityId && onUpdateCity) {
@@ -788,6 +840,13 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
                   </span>
                 </div>
                 <h3 className="text-3xl font-black text-white uppercase tracking-[0.2em]">{selectedCity.name}</h3>
+                {isOwner && (
+                  <div className="mt-1 flex items-center space-x-2">
+                    <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-500 text-[8px] font-black uppercase tracking-widest border border-amber-500/30">
+                      Founder Access
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center space-x-6 mt-3">
                   <div className="flex items-center space-x-2">
                     <div className={cn(
@@ -2923,37 +2982,47 @@ export const ChatStreamPanel = ({
 export const NodeExplorerPanel = ({ 
   nodes, 
   activeNodeId, 
-  onNodeSelect 
+  onNodeSelect,
+  onJoin
 }: { 
   nodes: Node[]; 
   activeNodeId: string | null; 
   onNodeSelect: (id: string) => void;
+  onJoin: (cityId: string, districtId?: string, streamId?: string) => void;
 }) => {
   return (
-    <div className="p-0 h-full flex flex-col bg-black/40">
-      <div className="p-6 border-b border-white/5 bg-white/5">
-        <h3 className="text-[10px] font-black text-nexus-indigo uppercase tracking-[0.4em]">Node Clusters</h3>
-        <p className="text-[8px] text-gray-500 mt-1 uppercase font-bold tracking-tighter">Scanning for active social dimensions...</p>
+    <div className="p-0 h-full flex flex-col bg-black/40 overflow-hidden relative">
+      <div className="p-6 border-b border-white/5 bg-white/5 flex items-center justify-between">
+        <div>
+          <h3 className="text-[10px] font-black text-nexus-indigo uppercase tracking-[0.4em]">Node Explorer</h3>
+          <p className="text-[8px] text-gray-500 mt-1 uppercase font-bold tracking-tighter">Connected Civilization Grid</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+          <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">{nodes.length} Live Nodes</span>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
         {nodes.map((node) => {
           const isActive = activeNodeId === node.id;
           return (
-            <button
+            <div
               key={node.id}
-              onClick={() => onNodeSelect(node.id)}
               className={cn(
-                "w-full group relative transition-all duration-500",
+                "w-full group relative transition-all duration-500 mb-4",
                 isActive ? "scale-105" : "hover:scale-102"
               )}
             >
-              <div className={cn(
-                "relative flex items-center p-4 rounded-2xl border transition-all duration-300",
-                isActive 
-                  ? "bg-nexus-indigo/10 border-nexus-indigo/50 shadow-[0_0_30px_rgba(75,63,226,0.2)]" 
-                  : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20"
-              )}>
+              <button
+                onClick={() => onNodeSelect(node.id)}
+                className={cn(
+                  "w-full relative flex items-center p-4 rounded-2xl border transition-all duration-300",
+                  isActive 
+                    ? "bg-nexus-indigo/10 border-nexus-indigo/50 shadow-[0_0_30px_rgba(75,63,226,0.2)]" 
+                    : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20"
+                )}
+              >
                 {/* Node Icon/Hologram */}
                 <div className={cn(
                   "relative w-12 h-12 rounded-xl flex items-center justify-center font-black text-lg mr-4 overflow-hidden",
@@ -2979,15 +3048,11 @@ export const NodeExplorerPanel = ({
                     </span>
                     <div className="flex items-center space-x-1">
                       <div className="w-1 h-1 rounded-full bg-emerald-500" />
-                      <span className="text-[8px] font-bold text-emerald-500/70">{Math.floor(node.memberCount / 10)} active</span>
+                      <span className="text-[8px] font-bold text-emerald-500/70">{Math.floor(node.population / 10)} active</span>
                     </div>
                   </div>
-                  <div className="flex items-center mt-2 space-x-2">
-                    {node.streams.slice(0, 3).map((stream: any) => (
-                      <span key={stream.id} className="text-[8px] px-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-gray-500 font-bold uppercase tracking-tighter">
-                        {stream.name}
-                      </span>
-                    ))}
+                  <div className="text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-1">
+                    {node.category} civilization
                   </div>
                 </div>
 
@@ -3000,8 +3065,47 @@ export const NodeExplorerPanel = ({
                     </span>
                   </div>
                 )}
-              </div>
-            </button>
+              </button>
+
+              {/* District Quick-Join List (Visible when active) */}
+              <AnimatePresence>
+                {isActive && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden mt-2 space-y-1 pl-4"
+                  >
+                    <div className="text-[7px] font-black text-white/20 uppercase tracking-[0.3em] mb-2 ml-2">Available Districts</div>
+                    {node.districts?.map(district => (
+                      <button
+                        key={district.id}
+                        onClick={() => onJoin(node.id, district.id)}
+                        className="w-full flex items-center justify-between p-2 rounded-xl bg-white/5 border border-white/5 hover:bg-nexus-indigo/20 hover:border-nexus-indigo/30 transition-all group/dist"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-6 h-6 rounded bg-black/40 flex items-center justify-center text-gray-500 group-hover/dist:text-nexus-indigo">
+                            {district.type === 'neural' && <Cpu size={12} />}
+                            {district.type === 'tactical' && <Shield size={12} />}
+                            {district.type === 'creative' && <Palette size={12} />}
+                            {district.type === 'commercial' && <BarChart size={12} />}
+                            {district.type === 'residential' && <Globe size={12} />}
+                            {district.type === 'industrial' && <Zap size={12} />}
+                          </div>
+                          <span className="text-[10px] font-bold text-gray-400 group-hover/dist:text-white uppercase tracking-tight">{district.name}</span>
+                        </div>
+                        <div className="text-[7px] font-black text-nexus-indigo opacity-0 group-hover/dist:opacity-100 transition-opacity uppercase tracking-widest">Warp In</div>
+                      </button>
+                    ))}
+                    {(!node.districts || node.districts.length === 0) && (
+                      <div className="p-3 text-[8px] text-gray-600 italic uppercase tracking-widest text-center bg-white/2 rounded-xl border border-dashed border-white/5">
+                        No districts established in this node
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           );
         })}
 

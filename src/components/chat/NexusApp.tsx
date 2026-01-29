@@ -14,6 +14,7 @@ import { TrustSafetyPanel } from "./TrustSafetyPanel";
 import { AetheryxCore, SpatialNotification } from "./SpatialElements";
 import { CityGridCanvas } from "./CityGridCanvas";
 import { OnboardingFlow } from "./OnboardingFlow";
+import { UpdatesPanel } from "./UpdatesPanel";
 import { CreateCityModal } from "./CreateCityModal";
 import { useAuth } from "@/context/AuthContext";
 import { dataService } from "@/lib/dataService";
@@ -30,8 +31,15 @@ const INITIAL_SPACES: Record<Space['id'], Space> = {
     id: 'social',
     name: 'Social Space',
     panels: [
-      { id: "shared-explorer", type: "node-explorer", title: "Node Explorer", x: 60, y: 160, width: 320, height: 550, zIndex: 10 },
-      { id: "shared-chat", type: "chat", title: "Data Stream // Central", x: 420, y: 140, width: 500, height: 700, zIndex: 20, data: { streamId: "s1" } }
+      { id: "shared-explorer", type: "node-explorer", title: "Node Explorer", x: 60, y: 160, width: 320, height: 550, zIndex: 10, data: { nodes } },
+      { id: "shared-chat", type: "chat", title: "Data Stream // Central", x: 420, y: 140, width: 500, height: 700, zIndex: 20, data: { streamId: "s1", nodes } }
+    ]
+  },
+  'city-browser': {
+    id: 'city-browser',
+    name: 'City Browser',
+    panels: [
+      { id: "shared-browser", type: "city-browser", title: "City Directory // Global", x: 60, y: 140, width: 900, height: 600, zIndex: 10, data: { nodes } }
     ]
   },
   studio: {
@@ -75,13 +83,6 @@ const INITIAL_SPACES: Record<Space['id'], Space> = {
       { id: "shared-chat", type: "chat", title: "Personal Stream", x: 580, y: 100, width: 500, height: 700, zIndex: 5, data: { streamId: "s3" } }
     ]
   },
-  'city-browser': {
-    id: 'city-browser',
-    name: 'City Browser',
-    panels: [
-      { id: "shared-browser", type: "city-browser", title: "City Directory // Global", x: 60, y: 140, width: 900, height: 600, zIndex: 10 }
-    ]
-  },
   'dev-grid': {
     id: 'dev-grid',
     name: 'Nexus Dev Grid',
@@ -102,6 +103,40 @@ export default function NexusApp() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
+  // State
+  const [activeSpaceId, setActiveSpaceId] = useState<Space['id']>('social');
+  const [nodes, setNodes] = useState<Node[]>([]);
+  const [messages, setMessages] = useState<Record<string, Message[]>>({});
+  const [activeNodeId, setActiveNodeId] = useState<string>("n1");
+  const [activeStreamId, setActiveStreamId] = useState<string>("s1");
+  const [isLoading, setIsLoading] = useState(true);
+  const [showCommandBar, setShowCommandBar] = useState(true);
+  const [showUpdates, setShowUpdates] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [canvasPos, setCanvasPos] = useState({ x: 0, y: 0, zoom: 1 });
+  const [isWarping, setIsWarping] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [pulsingPanelId, setPulsingPanelId] = useState<string | null>(null);
+  const [focusedPanelId, setFocusedPanelId] = useState<string | null>(null);
+  const [showCreateCityModal, setShowCreateCityModal] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const [notifications, setNotifications] = useState<{id: string, message: string, type: 'info' | 'alert'}[]>([]);
+  const [customSpaces, setCustomSpaces] = useState<Record<Space['id'], Space>>({});
+  const [isAetheryxActive, setIsAetheryxActive] = useState(false);
+  const [aetheryxStatus, setAetheryxStatus] = useState("Idle");
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('connecting');
+
+  const CURRENT_VERSION = "2.0.5"; // Increment version for "What's New" check
+
+  // Role Logic
+  const activeNode = useMemo(() => nodes.find(n => n.id === activeNodeId), [nodes, activeNodeId]);
+  const currentUserRole = useMemo(() => {
+    if (!user || !activeNode) return 'Citizen';
+    // If the user owns the city, they are the Founder
+    if (activeNode.ownerId === user.id) return 'Founder';
+    return 'Citizen';
+  }, [user, activeNode]);
+
   // Redirect if not logged in
   useEffect(() => {
     if (!authLoading && !user) {
@@ -109,16 +144,169 @@ export default function NexusApp() {
     }
   }, [user, authLoading, router]);
 
-  const [activeSpaceId, setActiveSpaceId] = useState<Space['id']>('social');
-  const [isAetheryxActive, setIsAetheryxActive] = useState(false);
-  const [aetheryxStatus, setAetheryxStatus] = useState("Idle");
-  const [spaces, setSpaces] = useState<Record<Space['id'], Space>>(INITIAL_SPACES);
-  const [messages, setMessages] = useState<Record<string, Message[]>>(MOCK_MESSAGES);
-  const [activeNodeId, setActiveNodeId] = useState<string>("n1");
-  const [activeStreamId, setActiveStreamId] = useState<string>("s1");
-  const [nodes, setNodes] = useState<Node[]>(MOCK_NODES);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showCommandBar, setShowCommandBar] = useState(true);
+  const spaces = useMemo(() => {
+    const INITIAL_SPACES: Record<Space['id'], Space> = {
+      social: {
+        id: 'social',
+        name: 'Social Space',
+        panels: [
+          { id: "shared-explorer", type: "node-explorer", title: "Node Explorer", x: 60, y: 160, width: 320, height: 550, zIndex: 10, data: { nodes } },
+          { id: "shared-chat", type: "chat", title: "Data Stream // Central", x: 420, y: 140, width: 500, height: 700, zIndex: 20, data: { streamId: "s1", nodes } }
+        ]
+      },
+      'city-browser': {
+        id: 'city-browser',
+        name: 'City Browser',
+        panels: [
+          { 
+            id: "shared-browser", 
+            type: "city-browser", 
+            title: "City Directory // Global", 
+            x: 60, 
+            y: 140, 
+            width: 900, 
+            height: 600, 
+            zIndex: 10, 
+            data: { 
+              nodes, 
+              currentUserRole,
+              onJoin: (id: string, districtId?: string, streamId?: string) => {
+                setActiveNodeId(id);
+                if (streamId) setActiveStreamId(streamId);
+                addNotification(`Synchronizing with ${nodes.find(n => n.id === id)?.name || 'Civilization'}...`, 'info');
+              },
+              onCreateStream: async (cityId: string, name: string) => {
+                const newStream = await dataService.createStream(cityId, name);
+                if (newStream) {
+                  setNodes(prev => prev.map(n => n.id === cityId ? { ...n, streams: [...n.streams, newStream], orbitingStreams: [...(n.orbitingStreams || []), newStream.id] } : n));
+                  addNotification(`Stream #${name} initialized.`, 'info');
+                }
+              },
+              onUpdateCity: async (cityId: string, updates: Partial<Node>) => {
+                const success = await dataService.updateCity(cityId, updates);
+                if (success) {
+                  setNodes(prev => prev.map(n => n.id === cityId ? { ...n, ...updates } : n));
+                  addNotification("Civilization parameters updated.", 'info');
+                }
+              },
+              onCreateDistrict: async (cityId: string, districtData: Partial<District>) => {
+                const newDistrict = await dataService.createDistrict(cityId, districtData);
+                if (newDistrict) {
+                  setNodes(prev => prev.map(n => n.id === cityId ? { ...n, districts: [...n.districts, newDistrict] } : n));
+                  addNotification(`District ${districtData.name} expansion complete.`, 'info');
+                }
+              }
+            } 
+          }
+        ]
+      },
+      studio: {
+        id: 'studio',
+        name: 'Creative Studio',
+        panels: [
+          { id: "shared-forge", type: "bot-forge", title: "AETHERYX Bot Forge", x: 100, y: 100, width: 400, height: 500, zIndex: 10 },
+          { id: "shared-chat", type: "chat", title: "Project Stream", x: 550, y: 100, width: 600, height: 700, zIndex: 20, data: { streamId: "s3" } }
+        ]
+      },
+      creator: {
+        id: 'creator',
+        name: 'Creator Workspace',
+        panels: [
+          { id: "shared-assets", type: "asset-library", title: "Asset Library", x: 60, y: 120, width: 350, height: 600, zIndex: 10 },
+          { id: "shared-tools", type: "creator-tools", title: "Creator Tools", x: 440, y: 120, width: 450, height: 500, zIndex: 20 },
+          { id: "shared-chat", type: "chat", title: "Dev Log // Synthesis", x: 920, y: 120, width: 400, height: 700, zIndex: 5, data: { streamId: "s2" } }
+        ]
+      },
+      ai: {
+        id: 'ai',
+        name: 'AI Research',
+        panels: [
+          { id: "shared-graph", type: "neural-graph", title: "AETHERYX Core // Neural Graph", x: 100, y: 100, width: 500, height: 600, zIndex: 10 },
+          { id: "shared-chat", type: "chat", title: "Neural Stream", x: 650, y: 100, width: 500, height: 700, zIndex: 20, data: { streamId: "s2" } }
+        ]
+      },
+      gaming: { 
+        id: 'gaming', 
+        name: 'Gaming Zone', 
+        panels: [
+          { id: "shared-map", type: "tactical-map", title: "Tactical Map // Sector 7", x: 60, y: 100, width: 450, height: 600, zIndex: 10 },
+          { id: "shared-chat", type: "chat", title: "Tactical Stream", x: 550, y: 100, width: 600, height: 800, zIndex: 5, data: { streamId: "s1" } }
+        ] 
+      },
+      personal: {
+        id: 'personal',
+        name: 'Identity Core',
+        panels: [
+          { 
+            id: "shared-profile", 
+            type: "profile", 
+            title: "Identity Core // Profile", 
+            x: 100, 
+            y: 100, 
+            width: 450, 
+            height: 700, 
+            zIndex: 10, 
+            data: { 
+              user, 
+              nodes, 
+              currentUserRole,
+              activeCityName: activeNode?.name || "Global Nexus"
+            } 
+          },
+          { id: "shared-chat", type: "chat", title: "Personal Stream", x: 580, y: 100, width: 500, height: 700, zIndex: 5, data: { streamId: "s3" } }
+        ]
+      },
+      'dev-grid': {
+        id: 'dev-grid',
+        name: 'Nexus Dev Grid',
+        panels: [
+          { 
+            id: "shared-dev-grid", 
+            type: "dev-grid", 
+            title: "Dev Grid // Logic Builder", 
+            x: 60, 
+            y: 140, 
+            width: 1000, 
+            height: 700, 
+            zIndex: 10,
+            data: {
+              nodes,
+              currentUserRole,
+              onDeploy: (cityId: string, districtId: string, logicName: string) => {
+                addNotification(`Logic "${logicName}" successfully deployed to ${nodes.find(n => n.id === cityId)?.name || 'Civilization'}.`, 'info');
+              }
+            }
+          }
+        ]
+      },
+      'governance': {
+        id: 'governance',
+        name: 'Trust & Safety',
+        panels: [
+          { id: "trust-portal", type: "trust-safety", title: "Trust & Safety Portal", x: 60, y: 120, width: 1000, height: 750, zIndex: 10 }
+        ]
+      }
+    };
+    return INITIAL_SPACES;
+  }, [nodes, user]);
+
+  // Space management
+  const activeSpace = useMemo(() => {
+    return customSpaces[activeSpaceId] || spaces[activeSpaceId];
+  }, [activeSpaceId, customSpaces, spaces]);
+
+  const setPanels = (newPanels: Panel[] | ((prev: Panel[]) => Panel[])) => {
+    const currentPanels = activeSpace.panels;
+    const updatedPanels = typeof newPanels === 'function' ? newPanels(currentPanels) : newPanels;
+    
+    setCustomSpaces(prev => ({
+      ...prev,
+      [activeSpaceId]: { 
+        ...activeSpace, 
+        panels: updatedPanels 
+      }
+    }));
+  };
 
   // Fetch cities from Supabase and subscribe to updates
   useEffect(() => {
@@ -127,6 +315,9 @@ export default function NexusApp() {
       const dbNodes = await dataService.fetchCities();
       if (dbNodes.length > 0) {
         setNodes(dbNodes);
+        setConnectionStatus('connected');
+      } else {
+        setConnectionStatus('disconnected');
       }
       setIsLoading(false);
     }
@@ -134,7 +325,7 @@ export default function NexusApp() {
 
     // Real-time subscription for city updates
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel('nexus-realtime-core')
       .on(
         'postgres_changes',
         {
@@ -159,6 +350,7 @@ export default function NexusApp() {
               orbitingStreams: streams?.map((s: any) => s.id) || []
             };
             setNodes(prev => [...prev, mappedNode]);
+            addNotification(`New civilization "${mappedNode.name}" detected in the Nexus.`, 'info');
           } else if (payload.eventType === 'UPDATE') {
             const updatedNode = payload.new as any;
             setNodes(prev => prev.map(node => 
@@ -176,36 +368,52 @@ export default function NexusApp() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') setConnectionStatus('connected');
+        if (status === 'CLOSED') setConnectionStatus('disconnected');
+        if (status === 'CHANNEL_ERROR') setConnectionStatus('disconnected');
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
 
-  const [notifications, setNotifications] = useState<{id: string, message: string, type: 'info' | 'alert'}[]>([]);
-  const currentUserRole = useMemo(() => {
-    if (!user) return 'Citizen';
-    
-    // Find the active node
-    const activeNode = nodes.find(n => n.id === activeNodeId);
-    
-    // If the user is the creator of the city, they are the FOUNDER
-    if (activeNode?.ownerId === user.id) {
-      return 'Founder';
+  useEffect(() => {
+    const lastSeenVersion = localStorage.getItem("nexus_last_seen_version");
+    if (lastSeenVersion !== CURRENT_VERSION && !isLoading) {
+      // Small delay to ensure everything is loaded before popping up
+      const timer = setTimeout(() => {
+        setShowUpdates(true);
+      }, 1500);
+      return () => clearTimeout(timer);
     }
+  }, [isLoading]);
 
-    // Default to Citizen for now (you can add more logic here later)
-    return 'Citizen';
-  }, [user, nodes, activeNodeId]);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [canvasPos, setCanvasPos] = useState({ x: 0, y: 0, zoom: 1 });
-  const [isWarping, setIsWarping] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [pulsingPanelId, setPulsingPanelId] = useState<string | null>(null);
-  const [focusedPanelId, setFocusedPanelId] = useState<string | null>(null);
-  const [showCreateCityModal, setShowCreateCityModal] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
+  const handleCloseUpdates = () => {
+    localStorage.setItem("nexus_last_seen_version", CURRENT_VERSION);
+    setShowUpdates(false);
+  };
+
+  if (authLoading) {
+    return (
+      <div className="h-screen w-full bg-nexus-dark flex flex-col items-center justify-center">
+        <div className="relative">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-16 h-16 border-2 border-nexus-indigo/20 border-t-nexus-indigo rounded-full"
+          />
+          <Zap className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-nexus-indigo animate-pulse" size={24} />
+        </div>
+        <div className="mt-8 text-nexus-indigo/60 font-mono text-xs tracking-[0.3em] uppercase animate-pulse">
+          Stabilizing Nexus Connection...
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return null; // Prevent flicker before redirect
 
   // Toggle debug with 'ctrl+d'
   useEffect(() => {
@@ -320,16 +528,6 @@ export default function NexusApp() {
       return true;
     }
     return false;
-  };
-
-  const setPanels = (newPanels: Panel[] | ((prev: Panel[]) => Panel[])) => {
-    setSpaces(prev => {
-      const updatedPanels = typeof newPanels === 'function' ? newPanels(prev[activeSpaceId].panels) : newPanels;
-      return {
-        ...prev,
-        [activeSpaceId]: { ...prev[activeSpaceId], panels: updatedPanels }
-      };
-    });
   };
 
   const handleFocus = (id: string) => {
@@ -638,6 +836,20 @@ export default function NexusApp() {
 
       <div className="w-8 h-[1px] bg-white/5 ml-1 my-2" />
 
+      {/* Founder-only Studio OS Access */}
+      {currentUserRole === 'Founder' && (
+        <button
+          onClick={() => router.push("/studio-os")}
+          className="w-10 h-10 rounded-xl bg-nexus-indigo/10 text-nexus-indigo hover:bg-nexus-indigo hover:text-white flex items-center justify-center transition-all group relative border border-nexus-indigo/20 hover:border-nexus-indigo/50 shrink-0"
+        >
+          <Layout size={18} />
+          <div className="absolute left-full ml-4 px-3 py-2 bg-[#0A0A0B] border border-nexus-indigo/20 rounded-lg opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-2xl">
+            <div className="text-[10px] font-bold text-nexus-indigo uppercase tracking-widest">Studio OS</div>
+            <div className="text-[8px] text-nexus-indigo/60 font-medium mt-0.5">Access Founder Dashboard</div>
+          </div>
+        </button>
+      )}
+
       <button
         onClick={() => setShowOnboarding(true)}
         className="w-10 h-10 rounded-xl bg-nexus-cyan/5 text-nexus-cyan hover:bg-nexus-cyan/10 flex items-center justify-center transition-all group relative border border-nexus-cyan/10 hover:border-nexus-cyan/30 shrink-0"
@@ -651,17 +863,58 @@ export default function NexusApp() {
     </div>
   );
 
-  // Fetch messages when stream changes
+  // Fetch messages when stream changes and subscribe to real-time
   useEffect(() => {
-    if (activeStreamId) {
-      const loadMessages = async () => {
-        const dbMessages = await dataService.fetchMessages(activeStreamId);
-        if (dbMessages.length > 0) {
-          setMessages(prev => ({ ...prev, [activeStreamId]: dbMessages }));
+    if (!activeStreamId) return;
+
+    const loadMessages = async () => {
+      const dbMessages = await dataService.fetchMessages(activeStreamId);
+      setMessages(prev => ({ ...prev, [activeStreamId]: dbMessages }));
+    };
+    loadMessages();
+
+    // Subscribe to new messages for this stream
+    const messageChannel = supabase
+      .channel(`stream-messages-${activeStreamId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `stream_id=eq.${activeStreamId}`
+        },
+        (payload) => {
+          const newMessage = payload.new as any;
+          // Avoid duplicate messages if the sender already added it to local state
+          setMessages(prev => {
+            const currentStreamMessages = prev[activeStreamId] || [];
+            if (currentStreamMessages.some(m => m.id === newMessage.id)) return prev;
+            
+            const mappedMessage: Message = {
+              id: newMessage.id,
+              content: newMessage.content,
+              authorId: newMessage.author_id,
+              streamId: newMessage.stream_id,
+              timestamp: newMessage.created_at,
+              type: newMessage.type || 'text',
+              task: newMessage.task,
+              voice: newMessage.voice,
+              moduleData: newMessage.module_data
+            };
+            
+            return {
+              ...prev,
+              [activeStreamId]: [...currentStreamMessages, mappedMessage]
+            };
+          });
         }
-      };
-      loadMessages();
-    }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(messageChannel);
+    };
   }, [activeStreamId]);
 
   const handleSendMessage = async (content: string, type: Message['type'] = 'text') => {
@@ -1117,6 +1370,7 @@ export default function NexusApp() {
           nodes={nodes}
           activeNodeId={activeNodeId}
           onNodeSelect={setActiveNodeId}
+          onJoin={handleJoinDistrict}
         />
       );
     }
@@ -1144,6 +1398,7 @@ export default function NexusApp() {
      if (panel.type === 'city-browser') return (
       <CityBrowserPanel 
         nodes={nodes} 
+        currentUserId={user?.id}
         currentUserRole={currentUserRole} 
         onJoin={handleJoinDistrict} 
         canvasPos={canvasPos} 
@@ -1296,6 +1551,9 @@ export default function NexusApp() {
         {showOnboarding && (
           <OnboardingFlow onComplete={handleOnboardingComplete} />
         )}
+        {showUpdates && (
+          <UpdatesPanel onClose={handleCloseUpdates} />
+        )}
       </AnimatePresence>
 
       <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] pointer-events-none">
@@ -1426,16 +1684,31 @@ export default function NexusApp() {
           
           <div className="absolute top-8 left-10 flex flex-col space-y-1.5 opacity-80">
             <div className="flex items-center space-x-2">
-              <div className="text-[10px] font-black text-white uppercase tracking-[0.4em]">
+              <div className="text-[10px] font-black text-white uppercase tracking-[0.4em] flex items-center gap-2">
                 Nexus Grid OS <span className="text-nexus-cyan">v4.0.6-TEST</span>
+                {currentUserRole === 'Founder' && (
+                  <motion.span 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="ml-2 px-2 py-0.5 bg-nexus-indigo text-[8px] font-black text-white rounded border border-white/20 shadow-[0_0_10px_rgba(75,63,226,0.5)]"
+                  >
+                    FOUNDER
+                  </motion.span>
+                )}
               </div>
               <div className="h-2 w-[1px] bg-white/10" />
               <div className="text-[9px] font-bold text-nexus-purple uppercase tracking-widest">{currentSpace.name}</div>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+              <div className={cn(
+                "w-1.5 h-1.5 rounded-full transition-all duration-500",
+                connectionStatus === 'connected' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" :
+                connectionStatus === 'connecting' ? "bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]" :
+                "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]"
+              )} />
               <div className="text-[9px] font-mono font-bold text-white/40 uppercase tracking-[0.1em]">
-                System Synchronized // <span className="text-white/60">{activeNode?.name}</span>
+                {connectionStatus === 'connected' ? 'System Synchronized' : 
+                 connectionStatus === 'connecting' ? 'Calibrating Frequencies' : 'Connection Interrupted'} // <span className="text-white/60">{activeNode?.name}</span>
               </div>
             </div>
           </div>

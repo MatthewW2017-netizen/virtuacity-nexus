@@ -67,10 +67,20 @@ export default function SignupPage() {
 
       // Check if email confirmation is required (Supabase default is usually true)
       if (authData.session) {
-        router.push("/studio-os");
+        router.push("/nexus");
       } else {
-        setError("Identity initialization complete! Please check your Outlook email to confirm your connection.");
-        setIsLoading(false);
+        // Attempt to log in immediately in case "Confirm Email" is disabled in Supabase
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (!loginError) {
+          router.push("/nexus");
+        } else {
+          setError("Identity initialized! If you haven't disabled 'Confirm Email' in Supabase, please check your inbox to activate your connection.");
+          setIsLoading(false);
+        }
       }
     }
   };
@@ -143,13 +153,20 @@ export default function SignupPage() {
           </div>
 
           {error && (
-            <motion.p 
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 p-3 rounded-lg"
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-sm font-medium"
             >
               {error}
-            </motion.p>
+            </motion.div>
+          )}
+
+          {/* Developer Bypass Hint */}
+          {!error && !isLoading && (
+            <div className="p-3 bg-nexus-indigo/5 border border-nexus-indigo/10 rounded-xl text-[10px] text-nexus-indigo/40 font-mono text-center">
+              TIP: DISABLE "CONFIRM EMAIL" IN SUPABASE DASHBOARD TO SKIP VERIFICATION
+            </div>
           )}
 
           <button
