@@ -95,7 +95,7 @@ export interface Topic {
 
 export interface Panel {
   id: string;
-  type: 'chat' | 'feed' | 'bot-forge' | 'studio' | 'ai' | 'profile' | 'notifications' | 'node-explorer' | 'creator' | 'asset-library' | 'creator-tools' | 'neural-graph' | 'tactical-map' | 'city-browser' | 'dev-grid' | 'trust-safety';
+  type: 'chat' | 'feed' | 'bot-forge' | 'studio' | 'ai' | 'profile' | 'notifications' | 'node-explorer' | 'creator' | 'asset-library' | 'creator-tools' | 'neural-graph' | 'tactical-map' | 'city-browser' | 'dev-grid' | 'trust-safety' | 'engineering-console';
   title: string;
   x: number;
   y: number;
@@ -190,7 +190,7 @@ export interface DevModule {
 }
 
 export interface Space {
-  id: 'personal' | 'social' | 'studio' | 'creator' | 'gaming' | 'ai' | 'city-browser' | 'dev-grid' | 'governance';
+  id: 'personal' | 'social' | 'studio' | 'creator' | 'gaming' | 'ai' | 'city-browser' | 'dev-grid' | 'governance' | 'engineering';
   name: string;
   panels: Panel[];
   background?: string;

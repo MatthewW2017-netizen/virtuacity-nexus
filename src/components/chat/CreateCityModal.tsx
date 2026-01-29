@@ -26,6 +26,7 @@ const COLORS = ["#4B3FE2", "#E23F3F", "#3FE2C1", "#E29E3F", "#8E24AA", "#3F7EE2"
 
 export const CreateCityModal = ({ isOpen, onClose, onCreate }: CreateCityModalProps) => {
   const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<CityCategory>('Social');
   const [atmosphere, setAtmosphere] = useState<CityAtmosphere>('Holographic');
   const [hexColor, setHexColor] = useState(COLORS[0]);
@@ -33,6 +34,16 @@ export const CreateCityModal = ({ isOpen, onClose, onCreate }: CreateCityModalPr
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+
+    // Reserved names check
+    const reservedNames = ["VIRTUACITY STUDIO", "VIRTUACITY NEXUS", "VIRTUACITY"];
+    const upperName = name.trim().toUpperCase();
+    
+    if (reservedNames.includes(upperName)) {
+      setError("THIS IDENTITY IS RESERVED FOR THE FOUNDER");
+      return;
+    }
+
     onCreate({
       name,
       category,
@@ -80,10 +91,25 @@ export const CreateCityModal = ({ isOpen, onClose, onCreate }: CreateCityModalPr
                   required
                   type="text"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (error) setError(null);
+                  }}
                   placeholder="Enter city name..."
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-xl font-black text-white uppercase tracking-wider focus:outline-none focus:border-nexus-indigo transition-all placeholder:text-white/10"
+                  className={cn(
+                    "w-full bg-white/5 border rounded-2xl py-4 px-6 text-xl font-black text-white uppercase tracking-wider focus:outline-none transition-all placeholder:text-white/10",
+                    error ? "border-red-500/50 text-red-500" : "border-white/10 focus:border-nexus-indigo"
+                  )}
                 />
+                {error && (
+                  <motion.p 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-[10px] text-red-500 font-black tracking-widest mt-2 ml-1"
+                  >
+                    {error}
+                  </motion.p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

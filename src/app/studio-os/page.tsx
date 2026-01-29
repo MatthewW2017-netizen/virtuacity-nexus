@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Layout, Users, Library, Clock, Kanban, Brain, Search, Plus, Play, Pause, Send, Bot, ArrowLeft, LogOut, Shield } from "lucide-react";
+import { Layout, Users, Library, Clock, Kanban, Brain, Search, Plus, Play, Pause, Send, Bot, ArrowLeft, LogOut, Shield, Zap } from "lucide-react";
 import Card from "@/components/Card";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -17,8 +17,11 @@ export default function StudioOSPage() {
   const [aiQuery, setAiQuery] = useState("");
   const [aiMessages, setAiMessages] = useState([
     { role: 'ai', content: "Welcome back, Creator. I have analyzed your recent activity in the Synthesis Sector. Your productivity is 14% above the baseline. How can I assist your workflow today?" },
-    { role: 'user', content: "I need help optimizing the shader nodes for the virtual city project." },
-    { role: 'ai', content: "Understood. Initializing Shader Optimization protocols. I recommend using the new 'Decentralized Light' module for better performance across mobile neural links." }
+    { role: 'ai', content: "SYSTEM UPDATE: The Bot Workshop is now operational. You can initialize new Assistant, Security, or Data units from the dashboard. To use a bot, deploy it to a specific sector for automated task handling." },
+    { role: 'user', content: "How do I use the bots?" },
+    { role: 'ai', content: "1. Go to 'Bot Workshop'.\n2. Click 'Build New Bot' and give it a designation.\n3. Once initialized, click 'Deploy' to assign it to a sector.\n4. Bots will automatically manage population growth and security in their assigned sectors while active." },
+    { role: 'user', content: "If my internet shuts down, does the website still run?" },
+    { role: 'ai', content: "Affirmative. The Nexus is hosted on decentralized edge nodes (Vercel). Even if your local neural link (internet) is severed, the city remains online for all other citizens. Your progress is synchronized to the Supabase data-core in real-time." }
   ]);
 
   // Project Board State
@@ -33,6 +36,15 @@ export default function StudioOSPage() {
     { id: 1, name: "Neon Shader Pro", type: "Shader", size: "12MB" },
     { id: 2, name: "City Bot v4", type: "3D Model", size: "45MB" },
     { id: 3, name: "Night Rain Texture", type: "Texture", size: "8MB" },
+  ]);
+
+  const [bots, setBots] = useState([
+    { id: 1, name: "Nexus_Guide_01", type: "Assistant", status: "Active", energy: 85 },
+    { id: 2, name: "Sentry_Alpha", type: "Security", status: "Charging", energy: 12 },
+  ]);
+
+  const [team, setTeam] = useState([
+    { id: 1, name: "Matthew (Founder)", role: "Founder", email: "owner@virtuacity.nexus", status: "Online" },
   ]);
 
   const { user } = useAuth();
@@ -55,6 +67,8 @@ export default function StudioOSPage() {
       if (data) {
         if (data.projects) setProjects(data.projects);
         if (data.assets) setAssets(data.assets);
+        if (data.bots) setBots(data.bots);
+        if (data.team) setTeam(data.team);
       }
 
       // Check if user is a founder of any city
@@ -81,13 +95,15 @@ export default function StudioOSPage() {
           user_id: user.id,
           projects,
           assets,
+          bots,
+          team,
           updated_at: new Date().toISOString()
         });
     };
 
     const timer = setTimeout(saveState, 2000); // Debounce saves
     return () => clearTimeout(timer);
-  }, [projects, assets, user]);
+  }, [projects, assets, bots, team, user]);
 
   const handleAiSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,6 +147,8 @@ export default function StudioOSPage() {
   const tabs = [
     { icon: <Users size={18} />, label: "Team Dashboard" },
     { icon: <Library size={18} />, label: "Asset Libraries" },
+    { icon: <Bot size={18} />, label: "Bot Workshop" },
+    { icon: <Shield size={18} />, label: "Permissions" },
     { icon: <Clock size={18} />, label: "Clock-In System" },
     { icon: <Kanban size={18} />, label: "Project Boards" },
     { icon: <Brain size={18} />, label: "AI Mentor" },
@@ -313,7 +331,205 @@ export default function StudioOSPage() {
                  </motion.div>
                )}
 
-               {activeTab === "Clock-In System" && (
+               {activeTab === "Bot Workshop" && (
+                 <motion.div
+                   key="bots"
+                   initial={{ opacity: 0, x: 20 }}
+                   animate={{ opacity: 1, x: 0 }}
+                   exit={{ opacity: 0, x: -20 }}
+                 >
+                   <div className="flex justify-between items-center mb-8">
+                      <h2 className="text-2xl font-bold">Bot Factory</h2>
+                      <button 
+                        onClick={() => {
+                          const name = prompt("Enter bot designation (e.g., Sentry_Beta):");
+                          if (name) {
+                            const types = ["Assistant", "Security", "Maintenance", "Data"];
+                            const type = types[Math.floor(Math.random() * types.length)];
+                            setBots([...bots, { id: Date.now(), name, type, status: "Initializing", energy: 100 }]);
+                            triggerNotification(`New bot unit [${name}] initialized.`);
+                          }
+                        }}
+                        className="flex items-center gap-2 bg-nexus-indigo px-4 py-2 rounded-xl text-sm font-bold hover:scale-105 transition-all"
+                      >
+                        <Plus size={16} />
+                        Build New Bot
+                      </button>
+                   </div>
+
+                   <div className="grid grid-cols-2 gap-4">
+                     {bots.map((bot) => (
+                       <div key={bot.id} className="p-6 bg-nexus-card/50 rounded-2xl border border-nexus-border hover:border-nexus-indigo/50 transition-all group">
+                         <div className="flex justify-between items-start mb-6">
+                           <div className="flex items-center gap-4">
+                             <div className="p-3 bg-nexus-indigo/10 rounded-xl text-nexus-indigo group-hover:bg-nexus-indigo group-hover:text-white transition-all">
+                               <Bot size={24} />
+                             </div>
+                             <div>
+                               <div className="font-bold text-lg">{bot.name}</div>
+                               <div className="text-[10px] text-gray-500 uppercase tracking-widest">{bot.type} UNIT</div>
+                             </div>
+                           </div>
+                           <div className={cn(
+                             "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
+                             bot.status === 'Active' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+                           )}>
+                             {bot.status}
+                           </div>
+                         </div>
+
+                         <div className="space-y-4">
+                           <div>
+                             <div className="flex justify-between text-[10px] font-bold text-gray-500 uppercase mb-1">
+                               <span>Neural Energy</span>
+                               <span>{bot.energy}%</span>
+                             </div>
+                             <div className="w-full h-1 bg-nexus-dark rounded-full overflow-hidden">
+                               <div 
+                                 className={cn(
+                                   "h-full rounded-full transition-all duration-1000",
+                                   bot.energy > 50 ? "bg-nexus-indigo" : bot.energy > 20 ? "bg-amber-500" : "bg-red-500"
+                                 )} 
+                                 style={{ width: `${bot.energy}%` }} 
+                               />
+                             </div>
+                           </div>
+
+                           <div className="flex gap-2">
+                             <button 
+                               onClick={() => triggerNotification(`${bot.name} is now patrolling Sector 01.`)}
+                               className="flex-1 py-2 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-nexus-indigo hover:text-white transition-all"
+                             >
+                               Deploy
+                             </button>
+                             <button 
+                               onClick={() => {
+                                 setBots(bots.filter(b => b.id !== bot.id));
+                                 triggerNotification(`${bot.name} decommissioned.`);
+                               }}
+                               className="px-3 py-2 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all"
+                             >
+                               Purge
+                             </button>
+                           </div>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 </motion.div>
+               )}
+
+               {activeTab === "Permissions" && (
+                  <motion.div
+                    key="permissions"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                  >
+                    <div className="flex justify-between items-center mb-8">
+                       <h2 className="text-2xl font-bold">Access Control</h2>
+                       {isFounder && (
+                         <button 
+                           onClick={() => {
+                             const email = prompt("Enter team member email:");
+                             if (email) {
+                               const name = email.split('@')[0];
+                               setTeam([...team, { id: Date.now(), name, role: "Operator", email, status: "Pending" }]);
+                               triggerNotification(`Invite sent to ${email}.`);
+                             }
+                           }}
+                           className="flex items-center gap-2 bg-nexus-indigo px-4 py-2 rounded-xl text-sm font-bold hover:scale-105 transition-all"
+                         >
+                           <Plus size={16} />
+                           Add Member
+                         </button>
+                       )}
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                      {team.map((member) => (
+                        <div key={member.id} className="p-4 bg-nexus-card/50 rounded-2xl border border-nexus-border flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className={cn(
+                              "w-10 h-10 rounded-full flex items-center justify-center font-black",
+                              member.role === 'Founder' ? "bg-amber-500/20 text-amber-500" : "bg-nexus-indigo/20 text-nexus-indigo"
+                            )}>
+                              {member.name[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-bold flex items-center gap-2">
+                                {member.name}
+                                {member.role === 'Founder' && <Shield size={12} className="text-amber-500" />}
+                              </div>
+                              <div className="text-[10px] text-gray-500">{member.email}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6">
+                             <div className="text-right">
+                               <div className="text-[10px] font-black text-white/30 uppercase tracking-widest">Role</div>
+                               <div className="text-xs font-bold text-nexus-indigo">{member.role}</div>
+                             </div>
+                             <div className="text-right">
+                               <div className="text-[10px] font-black text-white/30 uppercase tracking-widest">Status</div>
+                               <div className={cn(
+                                 "text-xs font-bold",
+                                 member.status === 'Online' ? "text-emerald-500" : "text-gray-500"
+                               )}>{member.status}</div>
+                             </div>
+                             {isFounder && member.role !== 'Founder' && (
+                               <button 
+                                 onClick={() => {
+                                   setTeam(team.filter(m => m.id !== member.id));
+                                   triggerNotification(`${member.name} removed from team.`);
+                                 }}
+                                 className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg"
+                               >
+                                 <LogOut size={16} />
+                               </button>
+                             )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {isFounder && (
+                      <div className="mt-12 p-8 bg-nexus-indigo/5 border border-nexus-indigo/20 rounded-[2rem]">
+                        <h3 className="text-lg font-black uppercase tracking-widest mb-4 flex items-center gap-3">
+                          <Zap size={20} className="text-amber-500" />
+                          Founder Operations
+                        </h3>
+                        <p className="text-gray-400 text-sm mb-6">These actions affect the entire Nexus Grid. Proceed with caution.</p>
+                        <div className="flex flex-wrap gap-4">
+                           <button 
+                             onClick={async () => {
+                               const { error } = await supabase.from('cities').upsert({
+                                 name: "VIRTUACITY STUDIO",
+                                 category: "Neural",
+                                 atmosphere: "Holographic",
+                                 hexColor: "#4B3FE2",
+                                 owner_id: user?.id,
+                                 population: 1,
+                                 is_public: true
+                               });
+                               if (!error) triggerNotification("VIRTUACITY STUDIO INITIALIZED.");
+                             }}
+                             className="px-6 py-3 bg-white text-black rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all"
+                           >
+                             Initialize VirtuaCity Studio
+                           </button>
+                           <button 
+                             onClick={() => triggerNotification("Nexus Grid Synchronized.")}
+                             className="px-6 py-3 bg-nexus-indigo text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all"
+                           >
+                             Force Grid Sync
+                           </button>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+
+                {activeTab === "Clock-In System" && (
                  <motion.div
                    key="clock"
                    initial={{ opacity: 0, x: 20 }}

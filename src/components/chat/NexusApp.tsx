@@ -16,6 +16,8 @@ import { CityGridCanvas } from "./CityGridCanvas";
 import { OnboardingFlow } from "./OnboardingFlow";
 import { UpdatesPanel } from "./UpdatesPanel";
 import { CreateCityModal } from "./CreateCityModal";
+import { EngineeringConsole } from "./EngineeringConsole";
+import { DebugProvider } from "../debug/DebugEngine";
 import { useAuth } from "@/context/AuthContext";
 import { dataService } from "@/lib/dataService";
 import { supabase } from "@/lib/supabase";
@@ -213,10 +215,18 @@ export default function NexusApp() {
         panels: [
           { id: "trust-portal", type: "trust-safety", title: "Trust & Safety Portal", x: 60, y: 120, width: 1000, height: 750, zIndex: 10 }
         ]
+      },
+      'engineering': {
+        id: 'engineering',
+        name: 'Engineering Hub',
+        panels: [
+          { id: "eng-console", type: "engineering-console", title: "System Diagnostics // Dev Console", x: 60, y: 120, width: 500, height: 700, zIndex: 100 },
+          { id: "eng-logic", type: "dev-grid", title: "Infrastructure // Logic", x: 580, y: 120, width: 700, height: 700, zIndex: 50, data: { nodes, currentUserRole } }
+        ]
       }
     };
     return INITIAL_SPACES;
-  }, [nodes, user]);
+  }, [nodes, user, currentUserRole]);
 
   // Space management
   const activeSpace = useMemo(() => {
@@ -666,6 +676,7 @@ export default function NexusApp() {
     'city-browser': Globe,
     'dev-grid': Code,
     'governance': Shield,
+    'engineering': Activity,
   };
 
   const GovernanceHUD = () => {
@@ -727,7 +738,12 @@ export default function NexusApp() {
       </div>
 
       <div className="flex flex-col space-y-2">
-        {(Object.keys(spaces) as Space['id'][]).map((spaceId) => {
+        {(Object.keys(spaces) as Space['id'][])
+          .filter(spaceId => {
+            if (spaceId === 'engineering') return currentUserRole === 'Founder';
+            return true;
+          })
+          .map((spaceId) => {
           const Icon = spaceIcons[spaceId] || Layout;
           const isActive = activeSpaceId === spaceId;
           return (
@@ -1388,6 +1404,7 @@ export default function NexusApp() {
         }} 
       />
     );
+    if (panel.type === 'engineering-console') return <EngineeringConsole />;
     if (panel.type === 'trust-safety') return <TrustSafetyPanel />;
     return null;
   };
@@ -1419,9 +1436,10 @@ export default function NexusApp() {
   };
 
   return (
-    <div className="relative h-screen w-full bg-nexus-dark overflow-hidden font-sans selection:bg-nexus-purple/30 selection:text-white">
-      {/* HUD Elements (Global) */}
-      <GovernanceHUD />
+    <DebugProvider>
+      <div className="relative h-screen w-full bg-nexus-dark overflow-hidden font-sans selection:bg-nexus-purple/30 selection:text-white">
+        {/* HUD Elements (Global) */}
+        <GovernanceHUD />
       
       {/* Warp Visual Overlay */}
       <AnimatePresence>
@@ -1701,5 +1719,6 @@ export default function NexusApp() {
         </div>
       </div>
     </div>
-  );
+  </DebugProvider>
+);
 }

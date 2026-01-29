@@ -188,5 +188,24 @@ export const dataService = {
       authorId: data.sender_id,
       streamId: data.stream_id
     };
+  },
+
+  async logSystemEvent(level: 'info' | 'warn' | 'error' | 'fatal', source: string, message: string, details?: any) {
+    // Attempt to log to a dedicated table, fallback to console if table doesn't exist yet
+    try {
+      const { error } = await supabase
+        .from('system_logs')
+        .insert({
+          level,
+          source,
+          message,
+          details,
+          timestamp: new Date().toISOString()
+        });
+      
+      if (error) throw error;
+    } catch (err) {
+      console.warn(`[${level.toUpperCase()}] ${source}: ${message}`, details || '');
+    }
   }
 };
