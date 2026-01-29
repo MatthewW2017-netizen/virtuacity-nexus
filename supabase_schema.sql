@@ -93,13 +93,33 @@ ALTER TABLE public.studio_state ENABLE ROW LEVEL SECURITY;
 
 -- Simple permissive policies for initial development
 -- Note: In production, you would restrict these further
-CREATE POLICY "Allow all for authenticated" ON public.cities FOR ALL TO authenticated USING (true);
-CREATE POLICY "Allow all for authenticated" ON public.districts FOR ALL TO authenticated USING (true);
-CREATE POLICY "Allow all for authenticated" ON public.streams FOR ALL TO authenticated USING (true);
-CREATE POLICY "Allow all for authenticated" ON public.messages FOR ALL TO authenticated USING (true);
-CREATE POLICY "Allow all for authenticated" ON public.studio_state FOR ALL TO authenticated USING (true);
+DO $$ 
+BEGIN
+    DROP POLICY IF EXISTS "Allow all for authenticated" ON public.cities;
+    CREATE POLICY "Allow all for authenticated" ON public.cities FOR ALL TO authenticated USING (true);
+    
+    DROP POLICY IF EXISTS "Allow all for authenticated" ON public.districts;
+    CREATE POLICY "Allow all for authenticated" ON public.districts FOR ALL TO authenticated USING (true);
+    
+    DROP POLICY IF EXISTS "Allow all for authenticated" ON public.streams;
+    CREATE POLICY "Allow all for authenticated" ON public.streams FOR ALL TO authenticated USING (true);
+    
+    DROP POLICY IF EXISTS "Allow all for authenticated" ON public.messages;
+    CREATE POLICY "Allow all for authenticated" ON public.messages FOR ALL TO authenticated USING (true);
+    
+    DROP POLICY IF EXISTS "Allow all for authenticated" ON public.studio_state;
+    CREATE POLICY "Allow all for authenticated" ON public.studio_state FOR ALL TO authenticated USING (true);
+END $$;
 
 -- Realtime Setup
+-- Ensure publication exists before adding tables
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+        CREATE PUBLICATION supabase_realtime;
+    END IF;
+END $$;
+
 ALTER PUBLICATION supabase_realtime ADD TABLE public.cities;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.studio_state;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
