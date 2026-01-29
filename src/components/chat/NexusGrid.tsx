@@ -251,7 +251,15 @@ export const NexusPanel = ({
 
       {/* Panel Content */}
       <div className="flex-1 overflow-hidden relative">
-        {children}
+        {React.Children.map(children, child => {
+          if (React.isValidElement(child)) {
+            return React.cloneElement(child as React.ReactElement<any>, { 
+              ...(panel.data || {}),
+              onClose: () => onClose(panel.id)
+            });
+          }
+          return child;
+        })}
       </div>
 
       {/* Resize Handle */}

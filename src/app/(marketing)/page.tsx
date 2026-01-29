@@ -62,7 +62,7 @@ export default function Home() {
           </motion.div>
         </div>
 
-        {/* Hero Image / Placeholder */}
+        {/* Hero Image */}
         <motion.div
           initial={{ opacity: 0, y: 100 }}
           animate={{ opacity: 1, y: 0 }}
@@ -75,19 +75,19 @@ export default function Home() {
               <Globe size={200} className="animate-pulse-slow" />
             </div>
             <div className="absolute bottom-8 left-8 z-20">
-              <p className="text-sm font-mono text-nexus-indigo/60">SYSTEM STATUS: OPERATIONAL</p>
-              <h3 className="text-xl font-bold">Nexus OS v1.0 Preview</h3>
+              <p className="text-sm font-mono text-nexus-indigo/60">SYSTEM STATUS: FULLY OPERATIONAL</p>
+              <h3 className="text-xl font-bold uppercase tracking-widest">Nexus OS: Founder's Edition</h3>
             </div>
           </div>
         </motion.div>
       </section>
 
-      {/* Feature Previews Section */}
+      {/* Feature Showcase Section */}
       <section className="py-32 w-full max-w-7xl px-4">
         <div className="text-center mb-20">
-          <h2 className="text-3xl md:text-5xl font-bold mb-4">Unified Ecosystem</h2>
-          <p className="text-gray-400 max-w-2xl mx-auto">
-            Experience a seamless integration of communication, creativity, and economy in a single cinematic interface.
+          <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-4">Unified Ecosystem</h2>
+          <p className="text-gray-400 max-w-2xl mx-auto font-medium">
+            Experience the "Founder's Edition" of VirtuaCity—a seamless integration of communication, creativity, and economy in a single cinematic interface.
           </p>
         </div>
 
@@ -151,28 +151,29 @@ export default function Home() {
         </div>
       </section>
 
-      {/* App Screenshots Placeholder Section */}
+      {/* Studio OS Showcase */}
       <section className="py-32 w-full bg-nexus-card/30 border-y border-nexus-border overflow-hidden">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center gap-16">
             <div className="flex-1">
-              <h2 className="text-3xl md:text-5xl font-bold mb-6">Built for Creators.</h2>
-              <p className="text-gray-400 text-lg mb-8">
-                Nexus Studio OS provides the professional tools you need to manage teams, track assets, and build the future of the metaverse.
+              <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-6">Built for Creators.</h2>
+              <p className="text-gray-400 text-lg mb-8 font-medium">
+                Nexus Studio OS provides the professional tools you need to manage teams, track assets, and build the future of the metaverse—live and fully operational.
               </p>
               <ul className="space-y-4">
-                {["Project Boards", "Asset Libraries", "Team Dashboards", "AI Mentors"].map((item) => (
-                  <li key={item} className="flex items-center gap-3 text-sm font-bold">
-                    <div className="w-1.5 h-1.5 rounded-full bg-nexus-indigo" />
+                {["Live Project Boards", "Cloud Asset Libraries", "Real-time Team Dashboards", "AETHERYX AI Mentors"].map((item) => (
+                  <li key={item} className="flex items-center gap-3 text-sm font-black uppercase tracking-widest">
+                    <div className="w-1.5 h-1.5 rounded-full bg-nexus-indigo shadow-[0_0_10px_rgba(75,63,226,0.8)]" />
                     {item}
                   </li>
                 ))}
               </ul>
             </div>
             <div className="flex-1 w-full">
-              <div className="relative aspect-square w-full max-w-md mx-auto glass-card rounded-3xl border border-nexus-indigo/20 flex items-center justify-center">
-                 <div className="text-nexus-indigo/20 font-black text-4xl transform -rotate-12">STUDIO OS</div>
+              <div className="relative aspect-square w-full max-w-md mx-auto glass-card rounded-[3rem] border border-nexus-indigo/20 flex items-center justify-center group overflow-hidden">
+                 <div className="text-nexus-indigo/20 font-black text-4xl transform -rotate-12 group-hover:scale-110 transition-transform duration-500">STUDIO OS</div>
                  <div className="absolute inset-0 bg-gradient-to-br from-nexus-indigo/10 to-transparent pointer-events-none" />
+                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-nexus-indigo/10 rounded-full blur-3xl animate-pulse" />
               </div>
             </div>
           </div>

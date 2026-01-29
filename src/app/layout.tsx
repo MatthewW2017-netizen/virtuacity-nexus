@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Syne, Quicksand, JetBrains_Mono } from "next/font/google";
 import "@/styles/globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { DebugProvider } from "@/components/debug/DebugEngine";
 
 const syne = Syne({ 
   subsets: ["latin"],
@@ -33,9 +34,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${syne.variable} ${quicksand.variable} ${jetbrainsMono.variable} font-soft bg-nexus-dark text-white min-h-screen antialiased`}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <DebugProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </DebugProvider>
       </body>
     </html>
   );

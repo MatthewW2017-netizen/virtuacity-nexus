@@ -10,6 +10,7 @@ interface CreateCityModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (data: Partial<Node>) => void;
+  isFounder?: boolean;
 }
 
 const CATEGORIES: { id: CityCategory; icon: any; desc: string }[] = [
@@ -24,7 +25,7 @@ const ATMOSPHERES: CityAtmosphere[] = ['Holographic', 'Cyberpunk', 'Solarpunk', 
 
 const COLORS = ["#4B3FE2", "#E23F3F", "#3FE2C1", "#E29E3F", "#8E24AA", "#3F7EE2"];
 
-export const CreateCityModal = ({ isOpen, onClose, onCreate }: CreateCityModalProps) => {
+export const CreateCityModal = ({ isOpen, onClose, onCreate, isFounder }: CreateCityModalProps) => {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<CityCategory>('Social');
@@ -39,7 +40,8 @@ export const CreateCityModal = ({ isOpen, onClose, onCreate }: CreateCityModalPr
     const reservedNames = ["VIRTUACITY STUDIO", "VIRTUACITY NEXUS", "VIRTUACITY"];
     const upperName = name.trim().toUpperCase();
     
-    if (reservedNames.includes(upperName)) {
+    // Explicit Founder check (hardcoded email or role)
+    if (reservedNames.includes(upperName) && !isFounder) {
       setError("THIS IDENTITY IS RESERVED FOR THE FOUNDER");
       return;
     }

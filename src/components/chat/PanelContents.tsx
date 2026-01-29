@@ -8,13 +8,374 @@ import {
   Search, Folder, Image as ImageIcon, FileCode, Play, Palette, 
   Box as BoxIcon, Scissors, Type, Download, Globe, Mic, CheckCircle2,
   Circle, Clock, MoreHorizontal, ExternalLink, RefreshCw,
-  Cloud, Terminal, Code, ChevronLeft, Users, Trash2
+  Cloud, Terminal, Code, ChevronLeft, Users, Trash2, BarChart3,
+  Lock, Key, Eye, UserPlus, Save
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { dataService } from "@/lib/dataService";
+import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 
-// ... existing components ...
+export const ChatStreamPanel = ({ 
+  streamId, 
+  nodes, 
+  messages: initialMessages = [],
+  currentUserRole = 'Citizen',
+  onSendMessage 
+}: { 
+  streamId: string, 
+  nodes?: Node[], 
+  messages?: Message[],
+  currentUserRole?: string,
+  onSendMessage?: (content: string) => void 
+}) => {
+  const [isMounted, setIsMounted] = React.useState(false);
+  const [messages, setMessages] = React.useState<Message[]>(initialMessages);
+  const [inputValue, setInputValue] = React.useState("");
+  const [isAetheryxActive, setIsAetheryxActive] = React.useState(false);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Sync with prop messages
+  React.useEffect(() => {
+    if (initialMessages && initialMessages.length > 0) {
+      setMessages(initialMessages);
+    } else {
+      setMessages([]);
+    }
+  }, [initialMessages]);
+
+  const activeStream = React.useMemo(() => {
+    if (!nodes || !streamId) return null;
+    for (const node of nodes) {
+      if (!node.streams) continue;
+      const stream = node.streams.find(s => s.id === streamId);
+      if (stream) return stream;
+    }
+    return null;
+  }, [streamId, nodes]);
+
+  const activeNode = React.useMemo(() => {
+    if (!nodes || !streamId) return null;
+    return nodes.find(n => n.streams?.some(s => s.id === streamId)) || null;
+  }, [streamId, nodes]);
+
+  React.useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Real-time subscription for messages
+  React.useEffect(() => {
+    if (!streamId) return;
+
+    const channel = supabase
+      .channel(`messages-${streamId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `stream_id=eq.${streamId}`
+      }, (payload) => {
+        const newMessage = payload.new as Message;
+        setMessages(prev => {
+          // Prevent duplicates
+          if (prev.find(m => m.id === newMessage.id)) return prev;
+          return [...prev, newMessage];
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [streamId]);
+
+  const handleSend = async () => {
+    if (!inputValue.trim()) return;
+    
+    const content = inputValue;
+    setInputValue("");
+
+    if (onSendMessage) {
+      onSendMessage(content);
+    } else {
+      // Direct send if no handler provided
+      await dataService.sendMessage(streamId, content, 'u1'); // MOCK USER ID
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  if (!isMounted) return null;
+
+  if (!activeStream) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-black/40 text-gray-500 p-8 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
+          <Hash size={24} className="opacity-20" />
+        </div>
+        <h3 className="text-xs font-black uppercase tracking-widest mb-2">Stream Offline</h3>
+        <p className="text-[10px] uppercase font-bold tracking-tighter max-w-[200px]">
+          The requested data stream could not be synchronized with the local Nexus core.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col bg-black/40 overflow-hidden relative">
+      {/* Stream Header */}
+      <div className="p-6 border-b border-white/5 bg-white/5 backdrop-blur-md flex items-center justify-between z-10">
+        <div className="flex items-center space-x-4">
+          <div className="w-10 h-10 rounded-xl bg-nexus-indigo/20 flex items-center justify-center border border-nexus-indigo/30">
+            <Hash size={18} className="text-nexus-indigo" />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-[10px] font-black text-white uppercase tracking-[0.4em]">{activeStream.name}</h3>
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            </div>
+            <p className="text-[8px] text-gray-500 mt-1 uppercase font-bold tracking-tighter">
+              {activeNode?.name || 'Global'} // Syncing Active
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          <button className="p-2 rounded-lg bg-white/5 text-gray-500 hover:text-white transition-all border border-white/5">
+            <Users size={14} />
+          </button>
+          <button className="p-2 rounded-lg bg-white/5 text-gray-500 hover:text-white transition-all border border-white/5">
+            <Settings size={14} />
+          </button>
+        </div>
+      </div>
+
+      {/* Messages Area */}
+      <div 
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar scroll-smooth"
+      >
+        <AnimatePresence initial={false}>
+          {messages.map((msg, i) => {
+            const isMe = msg.userId === 'u1';
+            const isAI = msg.userId === 'aetheryx';
+            
+            return (
+              <motion.div
+                key={msg.id || i}
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                className={cn(
+                  "flex flex-col",
+                  isMe ? "items-end" : "items-start"
+                )}
+              >
+                <div className={cn(
+                  "flex items-end space-x-3 max-w-[85%]",
+                  isMe && "flex-row-reverse space-x-reverse"
+                )}>
+                  {/* Avatar */}
+                  <div className={cn(
+                    "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-lg",
+                    isAI ? "bg-nexus-indigo/20 border-nexus-indigo/40" : "bg-white/5 border-white/10"
+                  )}>
+                    {isAI ? <Zap size={14} className="text-nexus-indigo" /> : <Users size={14} className="text-gray-500" />}
+                  </div>
+
+                  {/* Bubble */}
+                  <div className={cn(
+                    "p-4 rounded-2xl border text-[11px] font-medium leading-relaxed tracking-wide relative group",
+                    isMe 
+                      ? "bg-nexus-indigo text-white border-nexus-indigo/50 rounded-tr-none shadow-[0_0_20px_rgba(75,63,226,0.2)]" 
+                      : isAI
+                        ? "bg-white/5 text-nexus-indigo border-nexus-indigo/30 rounded-tl-none backdrop-blur-xl"
+                        : "bg-white/5 text-gray-200 border-white/10 rounded-tl-none backdrop-blur-xl"
+                  )}>
+                    {msg.content}
+                    
+                    {/* Timestamp */}
+                    <div className={cn(
+                      "absolute -bottom-5 text-[7px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-40 transition-opacity",
+                      isMe ? "right-0" : "left-0"
+                    )}>
+                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+
+      {/* Input Area */}
+      <div className="p-6 bg-white/5 border-t border-white/5 backdrop-blur-xl relative z-10">
+        <div className="relative flex items-end space-x-3">
+          <div className="flex-1 bg-black/40 border border-white/10 rounded-2xl focus-within:border-nexus-indigo/50 transition-all shadow-2xl overflow-hidden">
+            <textarea 
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder="Inject data into stream..."
+              className="w-full bg-transparent border-none outline-none text-[11px] text-white placeholder-gray-700 p-4 min-h-[50px] max-h-[150px] resize-none no-scrollbar font-medium"
+              rows={1}
+            />
+            
+            <div className="px-4 py-2 border-t border-white/5 flex items-center justify-between bg-white/5">
+              <div className="flex items-center space-x-4">
+                <button className="text-gray-600 hover:text-nexus-indigo transition-colors">
+                  <Sparkles size={14} />
+                </button>
+                <button className="text-gray-600 hover:text-nexus-indigo transition-colors">
+                  <ImageIcon size={14} />
+                </button>
+                <button className="text-gray-600 hover:text-nexus-indigo transition-colors">
+                  <Mic size={14} />
+                </button>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <div className="text-[8px] font-black text-gray-700 uppercase tracking-widest mr-2">
+                  {inputValue.length} chars
+                </div>
+                <button 
+                  onClick={handleSend}
+                  disabled={!inputValue.trim()}
+                  className={cn(
+                    "p-2 rounded-xl transition-all shadow-lg",
+                    inputValue.trim() 
+                      ? "bg-nexus-indigo text-white shadow-[0_0_15px_rgba(75,63,226,0.4)]" 
+                      : "bg-white/5 text-gray-700"
+                  )}
+                >
+                  <Send size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Aetheryx Status */}
+        <div className="mt-4 flex items-center justify-center space-x-3">
+          <div className="h-[1px] flex-1 bg-white/5" />
+          <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-white/5 border border-white/5">
+            <div className="w-1 h-1 rounded-full bg-nexus-indigo animate-pulse" />
+            <span className="text-[7px] font-black text-gray-500 uppercase tracking-[0.3em]">Aetheryx Intelligence Monitoring</span>
+          </div>
+          <div className="h-[1px] flex-1 bg-white/5" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const NodeExplorerPanel = ({ 
+  nodes, 
+  onSelectNode,
+  activeNodeId
+}: { 
+  nodes: Node[], 
+  onSelectNode?: (id: string) => void,
+  activeNodeId?: string
+}) => {
+  const [isMounted, setIsMounted] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const filteredNodes = React.useMemo(() => {
+    if (!nodes) return [];
+    return nodes.filter(n => n.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [nodes, searchQuery]);
+
+  if (!isMounted) return null;
+
+  return (
+    <div className="p-0 h-full flex flex-col bg-black/40">
+      <div className="p-6 border-b border-white/5 bg-white/5 flex items-center justify-between">
+        <div>
+          <h3 className="text-[10px] font-black text-nexus-indigo uppercase tracking-[0.4em]">Node Explorer</h3>
+          <p className="text-[8px] text-gray-500 mt-1 uppercase font-bold tracking-tighter">Active Civilizations</p>
+        </div>
+        <Globe size={16} className="text-nexus-indigo" />
+      </div>
+
+      <div className="p-4 border-b border-white/5">
+        <div className="bg-white/5 rounded-lg px-3 py-2 flex items-center border border-white/5 focus-within:border-nexus-indigo/30 transition-all">
+          <Search size={12} className="text-gray-600 mr-2" />
+          <input 
+            type="text" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search nodes..." 
+            className="bg-transparent border-none outline-none text-[10px] text-white placeholder-gray-700 w-full font-bold" 
+          />
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 no-scrollbar space-y-2">
+        {filteredNodes.map((node) => (
+          <motion.button
+            key={node.id}
+            whileHover={{ x: 4 }}
+            onClick={() => onSelectNode?.(node.id)}
+            className={cn(
+              "w-full p-4 rounded-2xl flex items-center space-x-4 border transition-all text-left group",
+              node.id === activeNodeId
+                ? "bg-nexus-indigo/10 border-nexus-indigo/30 shadow-[0_0_20px_rgba(75,63,226,0.1)]"
+                : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10"
+            )}
+          >
+            <div 
+              className="w-12 h-12 rounded-xl flex items-center justify-center border shadow-xl shrink-0 group-hover:scale-110 transition-transform"
+              style={{ 
+                backgroundColor: `${node.hexColor}20`, 
+                borderColor: `${node.hexColor}40`,
+                color: node.hexColor 
+              }}
+            >
+              <Zap size={20} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-black text-white uppercase tracking-wider truncate">{node.name}</span>
+                {node.id === activeNodeId && <div className="w-1.5 h-1.5 rounded-full bg-nexus-indigo animate-pulse" />}
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-[8px] font-bold text-gray-600 uppercase tracking-tighter">
+                  {node.streams?.length || 0} STREAMS
+                </span>
+                <span className="text-[8px] text-gray-800">•</span>
+                <span className="text-[8px] font-bold text-gray-600 uppercase tracking-tighter">
+                  {node.districts?.length || 0} DISTRICTS
+                </span>
+              </div>
+            </div>
+          </motion.button>
+        ))}
+        
+        {filteredNodes.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 text-gray-700">
+            <Search size={24} className="mb-4 opacity-20" />
+            <span className="text-[10px] font-black uppercase tracking-widest">No nodes found</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const HolographicDisplay = ({ color, icon: IconName, name, isSmall = false }: { color: string, icon: string, name: string, isSmall?: boolean }) => {
   const iconMap: Record<string, any> = {
@@ -55,12 +416,19 @@ const HolographicDisplay = ({ color, icon: IconName, name, isSmall = false }: { 
 };
 
 export const AssetLibraryPanel = ({ onInject }: { onInject?: (id: string, x: number, y: number) => void }) => {
+  const [isMounted, setIsMounted] = React.useState(false);
   const assets = [
     { id: 'a1', name: 'Nexus_Core_v2.obj', type: 'model', size: '12.4MB', color: 'text-blue-400' },
     { id: 'a2', name: 'Aether_Texture.png', type: 'texture', size: '2.1MB', color: 'text-purple-400' },
     { id: 'a3', name: 'Grid_Shader.glsl', type: 'shader', size: '45KB', color: 'text-emerald-400' },
     { id: 'a4', name: 'Ambient_Void.mp3', type: 'audio', size: '5.8MB', color: 'text-amber-400' },
   ];
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return null;
 
   return (
     <div className="p-0 h-full flex flex-col bg-black/40">
@@ -123,6 +491,7 @@ export const AssetLibraryPanel = ({ onInject }: { onInject?: (id: string, x: num
 };
 
 export const CreatorToolsPanel = ({ onInject }: { onInject?: (id: string, x: number, y: number) => void }) => {
+  const [isMounted, setIsMounted] = React.useState(false);
   const tools = [
     { id: 't1', icon: <Palette size={18} />, name: 'Styling', desc: 'CSS-in-Nexus Grid' },
     { id: 't2', icon: <BoxIcon size={18} />, name: 'Geometry', desc: '3D Node Mesh' },
@@ -130,6 +499,12 @@ export const CreatorToolsPanel = ({ onInject }: { onInject?: (id: string, x: num
     { id: 't4', icon: <Type size={18} />, name: 'Typography', desc: 'Aether Fonts' },
     { id: 't5', icon: <Globe size={18} />, name: 'World', desc: 'Spatial Rules' },
   ];
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return null;
 
   return (
     <div className="p-0 h-full flex flex-col bg-black/40">
@@ -216,6 +591,7 @@ export const CreatorToolsPanel = ({ onInject }: { onInject?: (id: string, x: num
 };
 
 export const NeuralGraphPanel = () => {
+  const [isMounted, setIsMounted] = React.useState(false);
   const [activePulse, setActivePulse] = React.useState<string | null>(null);
   
   const nodes = [
@@ -224,6 +600,12 @@ export const NeuralGraphPanel = () => {
     { id: 'n3', label: 'Memory', x: '35%', y: '75%', color: 'bg-emerald-500', icon: <Layers size={16} /> },
     { id: 'n4', label: 'Synthesis', x: '65%', y: '75%', color: 'bg-nexus-indigo', icon: <Zap size={16} /> },
   ];
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return null;
 
   const connections = [
     { from: 'n1', to: 'n2' },
@@ -371,6 +753,19 @@ export const NeuralGraphPanel = () => {
 
 export const TacticalMapPanel = () => {
   const [activeSector, setActiveSector] = React.useState<number | null>(null);
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <div className="h-full bg-black/60 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-nexus-indigo/20 border-t-nexus-indigo rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-0 h-full flex flex-col bg-black/60 overflow-hidden relative font-mono">
@@ -497,8 +892,8 @@ export const ProfilePanel = ({
   activeNodeId?: string, 
   currentUserRole?: 'Architect' | 'Founder' | 'Citizen' 
 }) => {
-  const activeCityName = activeNodeId ? nodes.find(n => n.id === activeNodeId)?.name : "Nexus Central";
-  const activeNode = nodes.find(n => n.id === activeNodeId);
+  const activeCityName = activeNodeId ? nodes?.find(n => n.id === activeNodeId)?.name : "Nexus Central";
+  const activeNode = nodes?.find(n => n.id === activeNodeId);
   
   // Calculate dynamic stats for the active node
   const activeStats = React.useMemo(() => {
@@ -509,6 +904,13 @@ export const ProfilePanel = ({
       growth: (activeNode.population || 0) > 1000 ? 4.2 : 1.8
     };
   }, [activeNode]);
+
+  const [isMounted, setIsMounted] = React.useState(false);
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return null;
 
   return (
     <div className="p-0 h-full flex flex-col bg-black/40 overflow-hidden">
@@ -559,7 +961,7 @@ export const ProfilePanel = ({
         <div className="grid grid-cols-3 gap-4">
           {[
             { label: 'Reputation', value: currentUserRole === 'Founder' ? '∞' : '4.8k', color: currentUserRole === 'Founder' ? 'text-amber-400' : 'text-blue-400' },
-            { label: 'Nodes', value: currentUserRole === 'Founder' ? 'GLOBAL' : nodes.length.toString(), color: currentUserRole === 'Founder' ? 'text-amber-400' : 'text-purple-400' },
+            { label: 'Nodes', value: currentUserRole === 'Founder' ? 'GLOBAL' : (nodes?.length || 0).toString(), color: currentUserRole === 'Founder' ? 'text-amber-400' : 'text-purple-400' },
             { label: 'Synthesis', value: currentUserRole === 'Founder' ? '100%' : `${activeStats.stability}%`, color: currentUserRole === 'Founder' ? 'text-amber-400' : 'text-emerald-400' },
           ].map((stat, i) => (
             <div key={i} className={cn(
@@ -640,9 +1042,11 @@ export const ProfilePanel = ({
 };
 
 export const CityScanner = ({ color, name, onComplete }: { color: string, name: string, onComplete: () => void }) => {
+  const [isMounted, setIsMounted] = React.useState(false);
   const [progress, setProgress] = React.useState(0);
   
   React.useEffect(() => {
+    setIsMounted(true);
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
@@ -655,6 +1059,8 @@ export const CityScanner = ({ color, name, onComplete }: { color: string, name: 
     }, 20);
     return () => clearInterval(interval);
   }, [onComplete]);
+
+  if (!isMounted) return null;
 
   return (
     <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 backdrop-blur-2xl">
@@ -718,6 +1124,7 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
   canvasPos?: { x: number, y: number, zoom: number },
   currentUserId?: string
 }) => {
+  const [isMounted, setIsMounted] = React.useState(false);
   const [selectedCityId, setSelectedCityId] = React.useState<string | null>(null);
   const [scanningCityId, setScanningCityId] = React.useState<string | null>(null);
   const [isCreatingStream, setIsCreatingStream] = React.useState(false);
@@ -727,6 +1134,11 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
   const [newDistrictName, setNewDistrictName] = React.useState("");
   const [newDistrictType, setNewDistrictType] = React.useState<District['type']>('neural');
   const [viewMode, setViewMode] = React.useState<'grid' | 'list' | 'spatial'>('grid');
+  const [cityTab, setCityTab] = React.useState<'overview' | 'permissions' | 'analytics'>('overview');
+  
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   // Edit form state
   const [editName, setEditName] = React.useState("");
@@ -734,7 +1146,134 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
   const [editAtmosphere, setEditAtmosphere] = React.useState<Node['atmosphere']>('Cyberpunk');
   const [editColor, setEditColor] = React.useState("");
 
-  const selectedCity = nodes.find(n => n.id === selectedCityId);
+  const selectedCity = nodes?.find(n => n.id === selectedCityId);
+
+  if (!isMounted) return null;
+
+  if (selectedCityId && !selectedCity && nodes?.length > 0) {
+    return (
+      <div className="h-full flex items-center justify-center bg-black/40">
+        <div className="text-center space-y-4">
+          <motion.div 
+            animate={{ rotate: 360 }} 
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }} 
+            className="w-12 h-12 border-2 border-nexus-indigo/20 border-t-nexus-indigo rounded-full mx-auto" 
+          />
+          <p className="text-[10px] font-black text-nexus-indigo uppercase tracking-widest animate-pulse">Synchronizing City Data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!selectedCity) {
+    const sortedNodes = [...(nodes || [])].sort((a, b) => {
+      // Reserved Founder cities first, then others
+      const reservedNames = ["VIRTUACITY STUDIO", "VIRTUACITY NEXUS", "VIRTUACITY"];
+      const aIsFounder = reservedNames.includes(a.name.toUpperCase());
+      const bIsFounder = reservedNames.includes(b.name.toUpperCase());
+      if (aIsFounder && !bIsFounder) return -1;
+      if (!aIsFounder && bIsFounder) return 1;
+      return 0;
+    });
+
+    return (
+      <div className="h-full flex flex-col bg-black/40 overflow-hidden">
+        <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/5">
+          <div>
+            <h3 className="text-[10px] font-black text-nexus-indigo uppercase tracking-[0.4em]">City Directory</h3>
+            <p className="text-[8px] text-gray-500 mt-1 uppercase font-bold tracking-tighter">Global Civilization Index</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <div className="flex bg-black/40 p-1 rounded-xl border border-white/5">
+              {(['grid', 'list', 'spatial'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className={cn(
+                    "px-4 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all",
+                    viewMode === mode ? "bg-nexus-indigo text-white shadow-lg" : "text-gray-500 hover:text-white"
+                  )}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+            {onCreateCity && (
+              <button
+                onClick={onCreateCity}
+                className="px-6 py-2 rounded-xl bg-nexus-indigo text-white text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all shadow-lg"
+              >
+                Initialize Node
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-8 no-scrollbar">
+          {viewMode === 'grid' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {sortedNodes.map((node) => (
+                <motion.div
+                  key={node.id}
+                  whileHover={{ y: -5, scale: 1.02 }}
+                  onClick={() => handleSelectCity(node.id)}
+                  className="p-6 rounded-[2rem] bg-white/5 border border-white/5 hover:border-nexus-indigo/30 transition-all cursor-pointer group relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="flex items-center space-x-4 relative z-10">
+                    <HolographicDisplay color={node.hexColor || "#4B3FE2"} icon={node.icon || "Globe"} name={node.name} isSmall />
+                    <div>
+                      <div className="text-[14px] font-black text-white uppercase tracking-wider group-hover:text-nexus-indigo transition-colors">{node.name}</div>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">{node.category}</span>
+                        <div className="w-1 h-1 rounded-full bg-gray-800" />
+                        <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">{node.atmosphere}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-6 flex items-center justify-between relative z-10">
+                    <div className="flex items-center space-x-2">
+                      <Users size={12} className="text-gray-600" />
+                      <span className="text-[10px] text-gray-500 font-bold">{formatPopulation(node.population)}</span>
+                    </div>
+                    <div className="px-3 py-1 rounded-lg bg-black/40 text-[8px] font-black text-nexus-indigo uppercase tracking-widest border border-white/5">
+                      Sync Core
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {viewMode === 'list' && (
+            <div className="space-y-2">
+              {sortedNodes.map((node) => (
+                <div
+                  key={node.id}
+                  onClick={() => handleSelectCity(node.id)}
+                  className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-nexus-indigo/30 transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: node.hexColor }} />
+                    <span className="text-[12px] font-black text-white uppercase tracking-widest group-hover:text-nexus-indigo transition-colors">{node.name}</span>
+                    <span className="text-[8px] text-gray-600 font-bold uppercase tracking-widest">{node.category} // {node.atmosphere}</span>
+                  </div>
+                  <div className="flex items-center space-x-6">
+                    <span className="text-[10px] text-gray-500 font-mono">{formatPopulation(node.population)} POP</span>
+                    <ChevronLeft size={14} className="text-gray-700 rotate-180" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {viewMode === 'spatial' && (
+            <SpatialView nodes={sortedNodes} onSelect={handleSelectCity} canvasPos={canvasPos} />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // Initialize edit form when city is selected or edit mode toggled
   React.useEffect(() => {
@@ -746,7 +1285,7 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
     }
   }, [selectedCity, isEditingCity]);
 
-  const scanningCity = nodes.find(n => n.id === scanningCityId);
+  const scanningCity = nodes?.find(n => n.id === scanningCityId);
 
   // Founder logic: Can manage if they are the owner or have the Architect role
   const isOwner = selectedCity?.ownerId === currentUserId;
@@ -809,7 +1348,26 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
     );
   }
 
+  if (selectedCityId && !selectedCity && nodes?.length > 0) {
+    return (
+      <div className="h-full flex items-center justify-center bg-black/40">
+        <div className="text-center space-y-4">
+          <motion.div 
+            animate={{ rotate: 360 }} 
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }} 
+            className="w-12 h-12 border-2 border-nexus-indigo/20 border-t-nexus-indigo rounded-full mx-auto" 
+          />
+          <p className="text-[10px] font-black text-nexus-indigo uppercase tracking-widest animate-pulse">Synchronizing City Data...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (selectedCityId && selectedCity) {
+    const districts = selectedCity.districts || [];
+    const streams = selectedCity.streams || [];
+    const orbitingStreamIds = selectedCity.orbitingStreams || [];
+
     return (
       <motion.div 
         initial={{ opacity: 0 }}
@@ -890,78 +1448,146 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
           </div>
         </div>
 
-        {isEditingCity && (
-          <div className="p-8 bg-nexus-indigo/5 border-b border-nexus-indigo/20 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="space-y-2">
-                <label className="text-[8px] font-black text-nexus-indigo uppercase tracking-widest">Civilization Name</label>
-                <input 
-                  type="text" 
-                  value={editName} 
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-black/40 border border-nexus-indigo/30 rounded-xl px-4 py-3 text-white text-[12px] font-bold uppercase tracking-wider outline-none focus:border-nexus-indigo"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[8px] font-black text-nexus-indigo uppercase tracking-widest">Category</label>
-                <select 
-                  value={editCategory} 
-                  onChange={(e) => setEditCategory(e.target.value as any)}
-                  className="w-full bg-black/40 border border-nexus-indigo/30 rounded-xl px-4 py-3 text-white text-[12px] font-bold uppercase tracking-wider outline-none focus:border-nexus-indigo"
-                >
-                  {['Social', 'Tactical', 'Neural', 'Creative', 'Industrial'].map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
+        {/* City View Tabs */}
+        <div className="px-8 bg-white/5 border-b border-white/5 flex items-center space-x-8">
+          {[
+            { id: 'overview', label: 'Overview', icon: Globe },
+            { id: 'permissions', label: 'Roles & Perms', icon: Shield, adminOnly: true },
+            { id: 'analytics', label: 'Analytics', icon: BarChart3, adminOnly: true }
+          ].map((tab) => {
+            if (tab.adminOnly && !canManage) return null;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setCityTab(tab.id as any)}
+                className={cn(
+                  "py-4 flex items-center space-x-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2",
+                  cityTab === tab.id 
+                    ? "text-nexus-indigo border-nexus-indigo" 
+                    : "text-gray-500 border-transparent hover:text-white"
+                )}
+              >
+                <Icon size={12} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {cityTab === 'permissions' && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex-1 overflow-y-auto p-8 no-scrollbar"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
+              {/* Left Column: Role Configuration */}
+              <div className="lg:col-span-2 space-y-8">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-[14px] font-black text-white uppercase tracking-wider">Role Matrix</h4>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter mt-1">Configure access tiers for {selectedCity.name}</p>
+                  </div>
+                  <button className="px-4 py-2 rounded-xl bg-nexus-indigo/10 text-nexus-indigo text-[10px] font-black uppercase tracking-widest border border-nexus-indigo/20 hover:bg-nexus-indigo hover:text-white transition-all flex items-center gap-2">
+                    <UserPlus size={14} /> Add Tier
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {[
+                    { name: 'ARCHITECT', color: '#4B3FE2', users: 1, perms: ['full_access', 'manage_roles', 'delete_city'] },
+                    { name: 'MODERATOR', color: '#10B981', users: 3, perms: ['manage_messages', 'kick_users', 'edit_streams'] },
+                    { name: 'CITIZEN', color: '#6B7280', users: 142, perms: ['send_messages', 'join_districts'] }
+                  ].map((role, i) => (
+                    <div key={role.name} className="p-6 rounded-3xl bg-white/5 border border-white/5 hover:border-white/10 transition-all group">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center border shadow-lg" style={{ backgroundColor: `${role.color}20`, borderColor: `${role.color}40`, color: role.color }}>
+                            <Shield size={20} />
+                          </div>
+                          <div>
+                            <div className="text-[12px] font-black text-white uppercase tracking-widest">{role.name}</div>
+                            <div className="text-[8px] text-gray-500 font-bold uppercase tracking-tighter">{role.users} Members Synchronized</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <button className="p-2 rounded-lg bg-white/5 text-gray-500 hover:text-white transition-all"><Settings size={14} /></button>
+                          <button className="p-2 rounded-lg bg-white/5 text-gray-500 hover:text-white transition-all"><Trash2 size={14} /></button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {role.perms.map(p => (
+                          <span key={p} className="px-2 py-1 rounded-md bg-black/40 text-[8px] font-mono text-gray-400 uppercase tracking-widest border border-white/5">
+                            {p.replace('_', ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   ))}
-                </select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-[8px] font-black text-nexus-indigo uppercase tracking-widest">Atmosphere</label>
-                <select 
-                  value={editAtmosphere} 
-                  onChange={(e) => setEditAtmosphere(e.target.value as any)}
-                  className="w-full bg-black/40 border border-nexus-indigo/30 rounded-xl px-4 py-3 text-white text-[12px] font-bold uppercase tracking-wider outline-none focus:border-nexus-indigo"
-                >
-                  {['Cyberpunk', 'Solarpunk', 'Brutalist', 'Holographic', 'Minimalist'].map(atm => (
-                    <option key={atm} value={atm}>{atm}</option>
+
+              {/* Right Column: Global Policies */}
+              <div className="space-y-8">
+                <div>
+                  <h4 className="text-[14px] font-black text-white uppercase tracking-wider">Security Policy</h4>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter mt-1">City-wide restriction protocols</p>
+                </div>
+
+                <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-6">
+                  {[
+                    { id: 'p1', label: 'Public Indexing', desc: 'Visible in global directory', icon: Eye, active: true },
+                    { id: 'p2', label: 'Restricted Entry', desc: 'Founder approval required', icon: Lock, active: false },
+                    { id: 'p3', label: 'Neural Encryption', desc: 'End-to-end stream security', icon: Key, active: true }
+                  ].map((policy) => (
+                    <div key={policy.id} className="flex items-center justify-between group">
+                      <div className="flex items-center space-x-4">
+                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border transition-all", policy.active ? "bg-nexus-indigo/10 border-nexus-indigo/30 text-nexus-indigo" : "bg-white/5 border-white/5 text-gray-700")}>
+                          <policy.icon size={18} />
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-black text-white uppercase tracking-widest">{policy.label}</div>
+                          <div className="text-[8px] text-gray-600 font-bold uppercase tracking-tighter">{policy.desc}</div>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={async () => {
+                          // Real action logic
+                          await dataService.createSystemUpdate('security', 'Policy Updated', `${selectedCity.name}: ${policy.label} toggled to ${!policy.active ? 'Active' : 'Inactive'}`);
+                        }}
+                        className={cn("w-10 h-5 rounded-full relative transition-all", policy.active ? "bg-nexus-indigo" : "bg-gray-800")}
+                      >
+                        <div className={cn("absolute top-1 w-3 h-3 rounded-full bg-white transition-all", policy.active ? "right-1" : "left-1")} />
+                      </button>
+                    </div>
                   ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[8px] font-black text-nexus-indigo uppercase tracking-widest">Primary Glow</label>
-                <div className="flex items-center space-x-3">
-                  <input 
-                    type="color" 
-                    value={editColor} 
-                    onChange={(e) => setEditColor(e.target.value)}
-                    className="w-12 h-12 bg-transparent border-none outline-none cursor-pointer"
-                  />
-                  <input 
-                    type="text" 
-                    value={editColor} 
-                    onChange={(e) => setEditColor(e.target.value)}
-                    className="flex-1 bg-black/40 border border-nexus-indigo/30 rounded-xl px-4 py-3 text-white text-[10px] font-mono outline-none focus:border-nexus-indigo"
-                  />
+
+                  <div className="pt-4">
+                    <button 
+                      onClick={async () => {
+                        await dataService.createSystemUpdate('feature', 'City Initialized Sync', `System synchronization triggered for ${selectedCity.name} by Owner.`);
+                      }}
+                      className="w-full py-4 rounded-2xl bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] hover:bg-nexus-indigo hover:text-white transition-all flex items-center justify-center gap-2"
+                    >
+                      <Save size={16} /> Save Configuration
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-6 rounded-3xl bg-red-500/5 border border-red-500/20">
+                  <h5 className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-2">Danger Zone</h5>
+                  <button className="w-full py-3 rounded-xl bg-red-500/10 text-red-500 text-[9px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-500 hover:text-white transition-all">
+                    Deconstruct Civilization Core
+                  </button>
                 </div>
               </div>
             </div>
-            <div className="flex justify-end space-x-4">
-              <button 
-                onClick={() => setIsEditingCity(false)}
-                className="px-6 py-3 rounded-xl bg-white/5 text-gray-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all"
-              >
-                Discard Changes
-              </button>
-              <button 
-                onClick={handleUpdateCity}
-                className="px-8 py-3 rounded-xl bg-nexus-indigo text-white text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-black transition-all shadow-lg"
-              >
-                Update Civilization Core
-              </button>
-            </div>
-          </div>
+          </motion.div>
         )}
 
-        <div className="flex-1 p-8 overflow-y-auto no-scrollbar grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {cityTab === 'overview' && (
+          <div className="flex-1 p-8 overflow-y-auto no-scrollbar grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em] flex items-center">
@@ -1027,7 +1653,7 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
                 </div>
               )}
 
-              {selectedCity.districts?.map(district => (
+              {districts.map(district => (
                 <motion.div
                   key={district.id}
                   whileHover={{ x: 10, backgroundColor: "rgba(255,255,255,0.08)" }}
@@ -1086,8 +1712,8 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
               )}
             </div>
             <div className="grid grid-cols-1 gap-4">
-              {selectedCity.orbitingStreams?.map(streamId => {
-                const stream = selectedCity.streams.find(s => s.id === streamId);
+              {orbitingStreamIds.map(streamId => {
+                const stream = streams.find(s => s.id === streamId);
                 if (!stream) return null;
                 return (
                   <motion.div
@@ -1169,12 +1795,17 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
   }
 
   const SpatialView = ({ nodes, onSelect, canvasPos }: { nodes: Node[], onSelect: (id: string) => void, canvasPos?: { x: number, y: number, zoom: number } }) => {
+    const [isMounted, setIsMounted] = React.useState(false);
     const containerRef = React.useRef<HTMLDivElement>(null);
     const [nodePositions, setNodePositions] = React.useState<Record<string, { x: number, y: number }>>({});
     
+    React.useEffect(() => {
+      setIsMounted(true);
+    }, []);
+
     // Initialize positions based on percentages
     React.useEffect(() => {
-      if (containerRef.current) {
+      if (isMounted && containerRef.current) {
         const { offsetWidth, offsetHeight } = containerRef.current;
         const initialPositions: Record<string, { x: number, y: number }> = {};
         nodes.forEach(node => {
@@ -1185,7 +1816,9 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
         });
         setNodePositions(initialPositions);
       }
-    }, [nodes]);
+    }, [nodes, isMounted]);
+
+    if (!isMounted) return null;
 
     const handleDrag = (id: string, info: any) => {
       setNodePositions(prev => ({
@@ -1244,7 +1877,7 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
               <stop offset="100%" stopColor="rgba(75,63,226,0.2)" />
             </linearGradient>
           </defs>
-          {nodes.map((node, i) => {
+          {nodes?.map((node, i) => {
             const nextNode = nodes[(i + 1) % nodes.length];
             const pos1 = nodePositions[node.id];
             const pos2 = nodePositions[nextNode.id];
@@ -1285,7 +1918,7 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
         </svg>
 
         {/* City Nodes */}
-        {nodes.map((node) => (
+        {nodes?.map((node) => (
           <motion.div
             key={node.id}
             drag
@@ -1394,11 +2027,11 @@ export const CityBrowserPanel = ({ nodes, currentUserRole, onJoin, onCreateStrea
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
               <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_12px_#10b981]" />
-              <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Stable Core Nodes: {nodes.filter(n => n.status === 'Stable').length}</span>
+              <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Stable Core Nodes: {nodes?.filter(n => n.status === 'Stable').length || 0}</span>
             </div>
             <div className="flex items-center space-x-3">
               <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_12px_#f59e0b]" />
-              <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Unstable Grid: {nodes.filter(n => n.status !== 'Stable').length}</span>
+              <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest">Unstable Grid: {nodes?.filter(n => n.status !== 'Stable').length || 0}</span>
             </div>
             <div className="pt-4 border-t border-white/5">
               <div className="text-[8px] font-mono text-gray-600 uppercase tracking-widest mb-2">Active Data Streams</div>
@@ -1677,6 +2310,7 @@ export const DevGridPanel = ({ nodes, currentUserRole, onDeploy, workflowSeed }:
   onDeploy: (cityId: string, districtId: string, logicName: string) => void,
   workflowSeed?: string
 }) => {
+  const [isMounted, setIsMounted] = React.useState(false);
   const [isDeploying, setIsDeploying] = React.useState(false);
   const [deployProgress, setDeployProgress] = React.useState(0);
   const [selectedCityId, setSelectedCityId] = React.useState<string>(nodes[0]?.id || "");
@@ -1687,8 +2321,14 @@ export const DevGridPanel = ({ nodes, currentUserRole, onDeploy, workflowSeed }:
   const [activeConnection, setActiveConnection] = React.useState<{ nodeId: string, outputId: string } | null>(null);
   const [mousePos, setMousePos] = React.useState({ x: 0, y: 0 });
   
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const canManage = currentUserRole === 'Architect' || currentUserRole === 'Founder';
-  
+
+  if (!isMounted) return null;
+
   const [placedNodes, setPlacedNodes] = React.useState([
     { 
       id: 'pn1', 
@@ -3132,7 +3772,14 @@ export const BotForgePanel = ({
   onAddModule: (id: string) => void;
   currentUserRole?: 'Architect' | 'Founder' | 'Citizen';
 }) => {
+  const [isMounted, setIsMounted] = React.useState(false);
   const canManage = currentUserRole === 'Architect' || currentUserRole === 'Founder';
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return null;
 
   return (
     <div className="p-0 h-full flex flex-col bg-black/40">

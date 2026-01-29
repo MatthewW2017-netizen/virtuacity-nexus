@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Layout, Users, Library, Clock, Kanban, Brain, Search, Plus, Play, Pause, Send, Bot, ArrowLeft, LogOut, Shield, Zap } from "lucide-react";
+import { Layout, Users, Library, Clock, Kanban, Brain, Search, Plus, Play, Pause, Send, Bot, ArrowLeft, LogOut, Shield, Zap, BarChart3, Settings } from "lucide-react";
 import Card from "@/components/Card";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -10,9 +10,36 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
 export default function StudioOSPage() {
+  const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState("Team Dashboard");
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [clockTime, setClockTime] = useState(0);
+
+  // Hydration Guard
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Clock-In Timer Logic
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isClockedIn) {
+      interval = setInterval(() => {
+        setClockTime(prev => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isClockedIn]);
+
+  // Format time for clock display
+  const formatTime = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
   const [notification, setNotification] = useState<string | null>(null);
   const [aiQuery, setAiQuery] = useState("");
   const [aiMessages, setAiMessages] = useState([
@@ -38,19 +65,51 @@ export default function StudioOSPage() {
     { id: 3, name: "Night Rain Texture", type: "Texture", size: "8MB" },
   ]);
 
-  const [bots, setBots] = useState([
-    { id: 1, name: "Nexus_Guide_01", type: "Assistant", status: "Active", energy: 85 },
-    { id: 2, name: "Sentry_Alpha", type: "Security", status: "Charging", energy: 12 },
+  const [bots, setBots] = useState<any[]>([]);
+
+  const [team, setTeam] = useState<any[]>([]);
+  const [customRoles, setCustomRoles] = useState([
+    { name: 'Operator', permissions: ['Access Studio', 'View Analytics'] },
+    { name: 'Architect', permissions: ['Access Studio', 'Build Bots', 'Edit City'] },
+    { name: 'Collaborator', permissions: ['Access Studio', 'Asset Upload'] }
   ]);
 
-  const [team, setTeam] = useState([
-    { id: 1, name: "Matthew (Founder)", role: "Founder", email: "owner@virtuacity.nexus", status: "Online" },
-  ]);
-
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
   const [isFounder, setIsFounder] = useState(false);
+
+  // Redirect if not logged in (safety)
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, authLoading, router]);
+
+  // Founder verification
+  useEffect(() => {
+    if (!user) return;
+    const founderEmails = [
+      'owner@virtuacity.nexus', 
+      'mattheww2017@netizens-projects.vercel.app',
+      'mattheww2017@gmail.com'
+    ];
+    
+    const checkAuthority = async () => {
+      const isEmailFounder = founderEmails.includes(user.email || '');
+      
+      // Also check if they own any city in the DB
+      const { data: cities } = await supabase
+        .from('cities')
+        .select('id')
+        .eq('owner_id', user.id)
+        .limit(1);
+        
+      setIsFounder(isEmailFounder || !!(cities && cities.length > 0));
+    };
+    
+    checkAuthority();
+  }, [user]);
 
   // Persistence Logic
   useEffect(() => {
@@ -69,41 +128,62 @@ export default function StudioOSPage() {
         if (data.assets) setAssets(data.assets);
         if (data.bots) setBots(data.bots);
         if (data.team) setTeam(data.team);
+        if (data.custom_roles) setCustomRoles(data.custom_roles);
+        if (data.is_clocked_in !== undefined) setIsClockedIn(data.is_clocked_in);
+        if (data.clock_time !== undefined) setClockTime(data.clock_time);
+        if (data.ai_messages) setAiMessages(data.ai_messages);
+      } else {
+        // Initial defaults if no state exists
+        setBots([
+          { id: 1, name: "Nexus_Guide_01", type: "Assistant", status: "Active", energy: 85 },
+          { id: 2, name: "Sentry_Alpha", type: "Security", status: "Charging", energy: 12 },
+        ]);
+        setTeam([
+          { id: 1, name: user.user_metadata?.name || user.email?.split('@')[0] || "Founder", role: "Founder", email: user.email, status: "Online" },
+        ]);
       }
-
-      // Check if user is a founder of any city
-      const { data: cities } = await supabase
-        .from('cities')
-        .select('id')
-        .eq('owner_id', user.id)
-        .limit(1);
-      
-      setIsFounder(!!(cities && cities.length > 0));
     };
 
     loadState();
   }, [user]);
+
+  const [isSaving, setIsSaving] = useState(false);
 
   // Save state when it changes
   useEffect(() => {
     if (!user) return;
 
     const saveState = async () => {
-      await supabase
-        .from('studio_state')
-        .upsert({
-          user_id: user.id,
-          projects,
-          assets,
-          bots,
-          team,
-          updated_at: new Date().toISOString()
-        });
+      setIsSaving(true);
+      try {
+        const { error } = await supabase
+          .from('studio_state')
+          .upsert({
+            user_id: user.id,
+            projects,
+            assets,
+            bots,
+            team,
+            custom_roles: customRoles,
+            is_clocked_in: isClockedIn,
+            clock_time: clockTime,
+            ai_messages: aiMessages,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+        
+        if (error) throw error;
+      } catch (err) {
+        console.error('Failed to save studio state:', err);
+      } finally {
+        setTimeout(() => setIsSaving(false), 500);
+      }
     };
 
-    const timer = setTimeout(saveState, 2000); // Debounce saves
+    const timer = setTimeout(saveState, 2000);
     return () => clearTimeout(timer);
-  }, [projects, assets, bots, team, user]);
+  }, [projects, assets, bots, team, user, isClockedIn, clockTime, aiMessages]);
+
+  if (!isMounted) return null;
 
   const handleAiSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,23 +206,129 @@ export default function StudioOSPage() {
     setTimeout(() => setNotification(null), 3000);
   };
 
+  // State for adding members
+  const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberRole, setNewMemberRole] = useState("Collaborator");
+
+  const handleAddMember = () => {
+    if (!newMemberEmail || !newMemberName) return;
+    
+    // Check if member already exists
+    if (team.find(m => m.email === newMemberEmail)) {
+      triggerNotification("Member already exists in team.");
+      return;
+    }
+
+    const newEntry = {
+      id: Date.now(),
+      name: newMemberName,
+      role: newMemberRole,
+      email: newMemberEmail,
+      status: "Offline"
+    };
+    setTeam(prev => [...prev, newEntry]);
+    setNewMemberEmail("");
+    setNewMemberName("");
+    setNewMemberRole("Collaborator"); // Reset role to default
+    triggerNotification(`Added ${newMemberName} to the team.`);
+  };
+
+  const handleRemoveMember = (id: number) => {
+    // Cannot remove the founder (id 1 or first entry)
+    if (id === 1 || (team.length > 0 && team[0].id === id)) {
+      triggerNotification("Cannot remove the primary Founder.");
+      return;
+    }
+    setTeam(prev => prev.filter(m => m.id !== id));
+    triggerNotification("Member removed from team.");
+  };
+
+  const handleDeleteBot = (id: number) => {
+    setBots(prev => {
+      const bot = prev.find(b => b.id === id);
+      if (bot) triggerNotification(`${bot.name} decommissioned.`);
+      return prev.filter(b => b.id !== id);
+    });
+  };
+
+  const handleDeleteAsset = (id: number) => {
+    setAssets(prev => {
+      const asset = prev.find(a => a.id === id);
+      if (asset) triggerNotification(`${asset.name} purged from system.`);
+      return prev.filter(a => a.id !== id);
+    });
+  };
+
+  const handleUpdateMemberRole = (id: number, newRole: string) => {
+    setTeam(prev => prev.map(m => m.id === id ? { ...m, role: newRole } : m));
+    triggerNotification("Member role updated.");
+  };
+
   const handleTabClick = (label: string) => {
     setActiveTab(label);
-    if (label === "Asset Libraries" || label === "Project Boards" || label === "Live Nexus Control") {
+    if (label === "Asset Libraries" || label === "Project Boards" || label === "Live Nexus Control" || label === "Analytics" || label === "City Config") {
       triggerNotification(`${label} is synchronizing with the Nexus...`);
     }
   };
 
-  // Redirect if not logged in (safety)
-  useEffect(() => {
-    if (!user) {
-      // Small delay to allow auth to load
-      const timer = setTimeout(() => {
-        if (!user) router.push("/login");
-      }, 2000);
-      return () => clearTimeout(timer);
+  // State for bot creation
+  const [newBotName, setNewBotName] = useState("");
+  const [newBotType, setNewBotType] = useState("Assistant");
+  const [showBotBuilder, setShowBotBuilder] = useState(false);
+
+  const handleBuildBot = () => {
+    if (!newBotName.trim()) return;
+    
+    const newBot = { 
+      id: Date.now(), 
+      name: newBotName, 
+      type: newBotType, 
+      status: "Active", 
+      energy: 100,
+      createdAt: new Date().toISOString()
+    };
+    
+    setBots(prev => [...prev, newBot]);
+    setNewBotName("");
+    setShowBotBuilder(false);
+    triggerNotification(`New bot unit [${newBotName}] initialized.`);
+  };
+
+  const [showRoleCreator, setShowRoleCreator] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRolePerms, setNewRolePerms] = useState<string[]>([]);
+
+  const handleCreateRole = () => {
+    if (!newRoleName.trim()) return;
+    setCustomRoles(prev => [...prev, { name: newRoleName, permissions: newRolePerms }]);
+    setNewRoleName("");
+    setNewRolePerms([]);
+    setShowRoleCreator(false);
+    triggerNotification(`Custom role [${newRoleName}] established.`);
+  };
+
+  const handleRemoveRole = (roleName: string) => {
+    // Prevent removing system roles
+    const systemRoles = ['Operator', 'Architect', 'Collaborator'];
+    if (systemRoles.includes(roleName)) {
+      triggerNotification("Cannot remove system-defined roles.");
+      return;
     }
-  }, [user, router]);
+    setCustomRoles(prev => prev.filter(r => r.name !== roleName));
+    triggerNotification(`Role [${roleName}] removed.`);
+  };
+
+  const togglePermission = (perm: string) => {
+    setNewRolePerms(prev => 
+      prev.includes(perm) ? prev.filter(p => p !== perm) : [...prev, perm]
+    );
+  };
+
+  const availablePermissions = [
+    'Access Studio', 'Build Bots', 'Edit City', 'View Analytics', 
+    'Asset Upload', 'Manage Roles', 'Manage Users', 'Financial Control'
+  ];
 
   const tabs = [
     { icon: <Users size={18} />, label: "Team Dashboard" },
@@ -153,6 +339,10 @@ export default function StudioOSPage() {
     { icon: <Kanban size={18} />, label: "Project Boards" },
     { icon: <Brain size={18} />, label: "AI Mentor" },
     { icon: <Play size={18} />, label: "Live Nexus Control" },
+    ...(isFounder ? [
+      { icon: <BarChart3 size={18} />, label: "Analytics" },
+      { icon: <Settings size={18} />, label: "City Config" }
+    ] : []),
   ];
 
   return (
@@ -172,7 +362,7 @@ export default function StudioOSPage() {
         )}
       </AnimatePresence>
 
-      <div className="flex flex-col items-center text-center mb-20">
+      <div className="flex flex-col items-center text-center mb-20 relative">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -180,6 +370,20 @@ export default function StudioOSPage() {
         >
           <Layout size={48} />
         </motion.div>
+        
+        <AnimatePresence>
+          {isSaving && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="absolute top-0 right-0 md:right-10 flex items-center gap-2 bg-nexus-indigo/20 border border-nexus-indigo/40 px-3 py-1 rounded-full"
+            >
+              <div className="w-2 h-2 rounded-full bg-nexus-indigo animate-ping" />
+              <span className="text-[10px] font-black text-nexus-indigo uppercase tracking-widest">Saving to Cloud...</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -320,7 +524,24 @@ export default function StudioOSPage() {
                         </div>
                         <h3 className="text-xl font-bold uppercase tracking-[0.3em]">Collaborative Core</h3>
                         <p className="text-gray-500 max-w-sm text-sm">Synchronize with your team in the AETHERYX workspace to begin visual collaboration.</p>
-                        <button className="bg-white/5 border border-white/10 px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-nexus-indigo hover:text-white transition-all">
+                        <button 
+                          onClick={async () => {
+                            triggerNotification("Neural links established. Synchronizing workspace...");
+                            const { data } = await supabase
+                              .from('studio_state')
+                              .select('*')
+                              .eq('user_id', user.id)
+                              .single();
+                            if (data) {
+                              if (data.projects) setProjects(data.projects);
+                              if (data.assets) setAssets(data.assets);
+                              if (data.bots) setBots(data.bots);
+                              if (data.team) setTeam(data.team);
+                              triggerNotification("Workspace synchronized with Cloud Core.");
+                            }
+                          }}
+                          className="bg-white/5 border border-white/10 px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-nexus-indigo hover:text-white transition-all"
+                        >
                           Initialize Sync
                         </button>
                       </div>
@@ -338,24 +559,80 @@ export default function StudioOSPage() {
                    animate={{ opacity: 1, x: 0 }}
                    exit={{ opacity: 0, x: -20 }}
                  >
-                   <div className="flex justify-between items-center mb-8">
-                      <h2 className="text-2xl font-bold">Bot Factory</h2>
-                      <button 
-                        onClick={() => {
-                          const name = prompt("Enter bot designation (e.g., Sentry_Beta):");
-                          if (name) {
-                            const types = ["Assistant", "Security", "Maintenance", "Data"];
-                            const type = types[Math.floor(Math.random() * types.length)];
-                            setBots([...bots, { id: Date.now(), name, type, status: "Initializing", energy: 100 }]);
-                            triggerNotification(`New bot unit [${name}] initialized.`);
-                          }
-                        }}
-                        className="flex items-center gap-2 bg-nexus-indigo px-4 py-2 rounded-xl text-sm font-bold hover:scale-105 transition-all"
-                      >
-                        <Plus size={16} />
-                        Build New Bot
-                      </button>
-                   </div>
+                  <div className="flex justify-between items-center mb-8">
+                     <div>
+                       <h2 className="text-2xl font-bold">Bot Factory</h2>
+                       <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Initialize and deploy autonomous units</p>
+                     </div>
+                     <button 
+                       onClick={() => setShowBotBuilder(true)}
+                       className="flex items-center gap-2 bg-nexus-indigo px-4 py-2 rounded-xl text-sm font-bold hover:scale-105 transition-all"
+                     >
+                       <Plus size={16} />
+                       Build New Bot
+                     </button>
+                  </div>
+
+                  {showBotBuilder && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      className="mb-8 p-6 bg-nexus-card border border-nexus-indigo/30 rounded-2xl overflow-hidden"
+                    >
+                      <h3 className="text-sm font-black uppercase tracking-widest mb-4">Initialize Neural Core</h3>
+                      <div className="flex gap-4">
+                        <div className="flex-1 space-y-2">
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Designation</label>
+                          <input 
+                            type="text"
+                            placeholder="e.g. Sentry_Alpha"
+                            value={newBotName}
+                            onChange={(e) => setNewBotName(e.target.value)}
+                            className="w-full bg-nexus-dark border border-nexus-border rounded-xl px-4 py-2 text-sm focus:border-nexus-indigo outline-none"
+                          />
+                        </div>
+                        <div className="flex-1 space-y-2">
+                          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Class Type</label>
+                          <select 
+                            value={newBotType}
+                            onChange={(e) => setNewBotType(e.target.value)}
+                            className="w-full bg-nexus-dark border border-nexus-border rounded-xl px-4 py-2 text-sm focus:border-nexus-indigo outline-none"
+                          >
+                            <option>Assistant</option>
+                            <option>Security</option>
+                            <option>Maintenance</option>
+                            <option>Data Analyzer</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-3 mt-6">
+                        <button 
+                          onClick={() => setShowBotBuilder(false)}
+                          className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white"
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          onClick={handleBuildBot}
+                          className="px-6 py-2 bg-nexus-indigo text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(79,70,229,0.4)]"
+                        >
+                          Construct Unit
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  <div className="mb-8 p-4 bg-nexus-indigo/5 border border-nexus-indigo/20 rounded-2xl flex items-start gap-4">
+                    <div className="p-2 bg-nexus-indigo/20 rounded-lg text-nexus-indigo shrink-0">
+                      <Brain size={16} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-black text-white uppercase tracking-widest mb-1">Aetheryx Instructions</div>
+                      <p className="text-[11px] text-gray-400 leading-relaxed">
+                        To use a bot, first <span className="text-nexus-indigo font-bold">Build</span> it in this workshop. Once initialized, click <span className="text-nexus-indigo font-bold">Deploy</span> to assign its neural core to a city sector. Deployed bots will automatically manage population growth and security protocols in the background.
+                      </p>
+                    </div>
+                  </div>
 
                    <div className="grid grid-cols-2 gap-4">
                      {bots.map((bot) => (
@@ -397,16 +674,21 @@ export default function StudioOSPage() {
 
                            <div className="flex gap-2">
                              <button 
-                               onClick={() => triggerNotification(`${bot.name} is now patrolling Sector 01.`)}
-                               className="flex-1 py-2 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest hover:bg-nexus-indigo hover:text-white transition-all"
+                               onClick={() => {
+                                 setBots(prev => prev.map(b => b.id === bot.id ? { ...b, status: b.status === 'Active' ? 'Deployed' : 'Active' } : b));
+                                 triggerNotification(`${bot.name} is now ${bot.status === 'Active' ? 'patrolling' : 'standing by in'} Sector 01.`);
+                               }}
+                               className={cn(
+                                 "flex-1 py-2 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-all",
+                                 bot.status === 'Deployed' 
+                                   ? "bg-amber-500/20 text-amber-500 border-amber-500/30 hover:bg-amber-500 hover:text-white" 
+                                   : "bg-white/5 border-white/10 text-white hover:bg-nexus-indigo hover:text-white"
+                               )}
                              >
-                               Deploy
+                               {bot.status === 'Deployed' ? 'Recall' : 'Deploy'}
                              </button>
                              <button 
-                               onClick={() => {
-                                 setBots(bots.filter(b => b.id !== bot.id));
-                                 triggerNotification(`${bot.name} decommissioned.`);
-                               }}
+                               onClick={() => handleDeleteBot(bot.id)}
                                className="px-3 py-2 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all"
                              >
                                Purge
@@ -429,22 +711,107 @@ export default function StudioOSPage() {
                     <div className="flex justify-between items-center mb-8">
                        <h2 className="text-2xl font-bold">Access Control</h2>
                        {isFounder && (
-                         <button 
-                           onClick={() => {
-                             const email = prompt("Enter team member email:");
-                             if (email) {
-                               const name = email.split('@')[0];
-                               setTeam([...team, { id: Date.now(), name, role: "Operator", email, status: "Pending" }]);
-                               triggerNotification(`Invite sent to ${email}.`);
-                             }
-                           }}
-                           className="flex items-center gap-2 bg-nexus-indigo px-4 py-2 rounded-xl text-sm font-bold hover:scale-105 transition-all"
-                         >
-                           <Plus size={16} />
-                           Add Member
-                         </button>
+                         <div className="flex gap-4">
+                           <button 
+                             onClick={() => setShowRoleCreator(true)}
+                             className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-xl text-sm font-bold hover:bg-nexus-indigo transition-all"
+                           >
+                             <Shield size={16} />
+                             Define Role
+                           </button>
+                           <div className="flex gap-2">
+                             <input 
+                               type="text"
+                               placeholder="Name"
+                               value={newMemberName}
+                               onChange={(e) => setNewMemberName(e.target.value)}
+                               className="bg-nexus-card border border-nexus-border rounded-xl px-3 py-2 text-xs focus:border-nexus-indigo outline-none"
+                             />
+                             <input 
+                               type="email"
+                               placeholder="Email"
+                               value={newMemberEmail}
+                               onChange={(e) => setNewMemberEmail(e.target.value)}
+                               className="bg-nexus-card border border-nexus-border rounded-xl px-3 py-2 text-xs focus:border-nexus-indigo outline-none"
+                             />
+                             <select 
+                              value={newMemberRole}
+                              onChange={(e) => setNewMemberRole(e.target.value)}
+                              className="bg-nexus-card border border-nexus-border rounded-xl px-3 py-2 text-xs focus:border-nexus-indigo outline-none"
+                            >
+                              <option>Operator</option>
+                              <option>Architect</option>
+                              <option>Collaborator</option>
+                              {customRoles.map(role => (
+                                <option key={role.name}>{role.name}</option>
+                              ))}
+                            </select>
+                           </div>
+                           <button 
+                             onClick={handleAddMember}
+                             className="flex items-center gap-2 bg-nexus-indigo px-4 py-2 rounded-xl text-sm font-bold hover:scale-105 transition-all"
+                           >
+                             <Plus size={16} />
+                             Add Member
+                           </button>
+                         </div>
                        )}
                     </div>
+
+                    {showRoleCreator && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        className="mb-8 p-6 bg-nexus-card border border-amber-500/30 rounded-2xl overflow-hidden"
+                      >
+                        <h3 className="text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                          <Shield size={16} className="text-amber-500" />
+                          New Authority Level
+                        </h3>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Role Name</label>
+                            <input 
+                              type="text"
+                              placeholder="e.g. Chief Architect"
+                              value={newRoleName}
+                              onChange={(e) => setNewRoleName(e.target.value)}
+                              className="w-full bg-nexus-dark border border-nexus-border rounded-xl px-4 py-2 text-sm focus:border-nexus-indigo outline-none"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Permissions</label>
+                            <div className="grid grid-cols-3 gap-2">
+                              {availablePermissions.map(perm => (
+                                <label key={perm} className="flex items-center gap-2 p-2 bg-nexus-dark rounded-lg border border-white/5 cursor-pointer hover:border-nexus-indigo/30">
+                                  <input 
+                                    type="checkbox"
+                                    checked={newRolePerms.includes(perm)}
+                                    onChange={() => togglePermission(perm)}
+                                    className="accent-nexus-indigo"
+                                  />
+                                  <span className="text-[10px] font-bold">{perm}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-3 mt-6">
+                          <button 
+                            onClick={() => setShowRoleCreator(false)}
+                            className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white"
+                          >
+                            Cancel
+                          </button>
+                          <button 
+                            onClick={handleCreateRole}
+                            className="px-6 py-2 bg-amber-500 text-black rounded-xl text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(245,158,11,0.4)]"
+                          >
+                            Establish Role
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
 
                     <div className="grid grid-cols-1 gap-4">
                       {team.map((member) => (
@@ -478,10 +845,7 @@ export default function StudioOSPage() {
                              </div>
                              {isFounder && member.role !== 'Founder' && (
                                <button 
-                                 onClick={() => {
-                                   setTeam(team.filter(m => m.id !== member.id));
-                                   triggerNotification(`${member.name} removed from team.`);
-                                 }}
+                                 onClick={() => handleRemoveMember(member.id)}
                                  className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg"
                                >
                                  <LogOut size={16} />
@@ -502,23 +866,49 @@ export default function StudioOSPage() {
                         <div className="flex flex-wrap gap-4">
                            <button 
                              onClick={async () => {
-                               const { error } = await supabase.from('cities').upsert({
+                               // Check if it already exists
+                               const { data: existing } = await supabase
+                                 .from('cities')
+                                 .select('id')
+                                 .eq('name', "VIRTUACITY STUDIO")
+                                 .single();
+                               
+                               if (existing) {
+                                 triggerNotification("VIRTUACITY STUDIO CORE IS ALREADY ACTIVE.");
+                                 return;
+                               }
+
+                               const { error } = await supabase.from('cities').insert({
                                  name: "VIRTUACITY STUDIO",
                                  category: "Neural",
                                  atmosphere: "Holographic",
-                                 hexColor: "#4B3FE2",
+                                 hex_color: "#4B3FE2",
                                  owner_id: user?.id,
                                  population: 1,
-                                 is_public: true
+                                 status: 'online',
+                                 x: 500,
+                                 y: 500
                                });
+                               
                                if (!error) triggerNotification("VIRTUACITY STUDIO INITIALIZED.");
+                               else {
+                                 console.error(error);
+                                 triggerNotification("INITIALIZATION FAILURE: CORE CONFLICT.");
+                               }
                              }}
                              className="px-6 py-3 bg-white text-black rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all"
                            >
                              Initialize VirtuaCity Studio
                            </button>
                            <button 
-                             onClick={() => triggerNotification("Nexus Grid Synchronized.")}
+                             onClick={async () => {
+                               triggerNotification("Propagating neural updates to Nexus Grid...");
+                               // Force a reload of all cities in the database
+                               const { data, error } = await supabase.from('cities').select('id');
+                               if (!error) {
+                                 triggerNotification(`Nexus Grid Synchronized. ${data.length} Nodes Online.`);
+                               }
+                             }}
                              className="px-6 py-3 bg-nexus-indigo text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all"
                            >
                              Force Grid Sync
@@ -545,7 +935,7 @@ export default function StudioOSPage() {
                    <div className="relative">
                      <div className={`w-48 h-48 rounded-full border-4 flex items-center justify-center transition-all duration-500 ${isClockedIn ? "border-nexus-indigo nexus-glow" : "border-gray-800"}`}>
                        <div className="text-4xl font-mono font-bold tracking-tighter">
-                         {isClockedIn ? "02:45:12" : "00:00:00"}
+                         {formatTime(clockTime)}
                        </div>
                      </div>
                      {isClockedIn && (
@@ -650,7 +1040,7 @@ export default function StudioOSPage() {
                         onClick={() => {
                           const name = prompt("Enter asset name:");
                           if (name) {
-                            setAssets([...assets, { id: Date.now(), name, type: "Generic", size: "0MB" }]);
+                            setAssets(prev => [...prev, { id: Date.now(), name, type: "Generic", size: "0MB" }]);
                             triggerNotification("Asset uploaded to Nexus Cloud.");
                           }
                         }}
@@ -674,10 +1064,7 @@ export default function StudioOSPage() {
                            </div>
                          </div>
                          <button 
-                          onClick={() => {
-                            setAssets(assets.filter(a => a.id !== asset.id));
-                            triggerNotification("Asset purged from system.");
-                          }}
+                          onClick={() => handleDeleteAsset(asset.id)}
                           className="opacity-0 group-hover:opacity-100 p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
                          >
                            Purge
@@ -697,10 +1084,25 @@ export default function StudioOSPage() {
                  >
                    <div className="flex justify-between items-center mb-8">
                       <h2 className="text-2xl font-bold">Project Flux</h2>
-                      <div className="flex gap-2 text-[10px] font-black uppercase tracking-widest">
-                        <span className="text-nexus-indigo">Active: {projects.length}</span>
-                        <span className="text-gray-500">|</span>
-                        <span className="text-green-500">Syncing...</span>
+                      <div className="flex gap-4 items-center">
+                        <button 
+                          onClick={() => {
+                            const name = prompt("Enter project title:");
+                            if (name) {
+                              setProjects(prev => [...prev, { id: Date.now(), title: name, status: "To Do", priority: "Medium" }]);
+                              triggerNotification(`Project [${name}] initialized.`);
+                            }
+                          }}
+                          className="flex items-center gap-2 bg-nexus-indigo px-3 py-1.5 rounded-xl text-[10px] font-bold hover:scale-105 transition-all"
+                        >
+                          <Plus size={12} />
+                          New Project
+                        </button>
+                        <div className="flex gap-2 text-[10px] font-black uppercase tracking-widest">
+                          <span className="text-nexus-indigo">Active: {projects.length}</span>
+                          <span className="text-gray-500">|</span>
+                          <span className="text-green-500">Syncing...</span>
+                        </div>
                       </div>
                    </div>
 
@@ -739,29 +1141,6 @@ export default function StudioOSPage() {
                          </div>
                        </div>
                      ))}
-                   </div>
-                 </motion.div>
-               )}
-
-               {false && (activeTab === "Asset Libraries" || activeTab === "Project Boards") && (
-                 <motion.div
-                   key="placeholder"
-                   initial={{ opacity: 0, scale: 0.95 }}
-                   animate={{ opacity: 1, scale: 1 }}
-                   exit={{ opacity: 0, scale: 0.95 }}
-                   className="flex flex-col items-center justify-center h-full text-center space-y-4"
-                 >
-                   <div className="p-6 bg-white/5 rounded-full mb-4">
-                     {tabs.find(t => t.label === activeTab)?.icon}
-                   </div>
-                   <h3 className="text-xl font-bold uppercase tracking-widest">{activeTab}</h3>
-                   <p className="text-gray-500 max-w-xs">This module is currently undergoing synchronization. Expected online in Build 2.1.0.</p>
-                   <div className="w-48 h-1 bg-nexus-dark rounded-full overflow-hidden">
-                     <motion.div 
-                        className="bg-nexus-indigo h-full"
-                        animate={{ width: ["0%", "100%"] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                     />
                    </div>
                  </motion.div>
                )}
@@ -828,6 +1207,218 @@ export default function StudioOSPage() {
                          </button>
                        </div>
                      ))}
+                   </div>
+                 </motion.div>
+               )}
+               {activeTab === "Analytics" && (
+                 <motion.div
+                   key="analytics"
+                   initial={{ opacity: 0, x: 20 }}
+                   animate={{ opacity: 1, x: 0 }}
+                   exit={{ opacity: 0, x: -20 }}
+                 >
+                   <div className="flex justify-between items-center mb-8">
+                      <h2 className="text-2xl font-bold">Nexus Analytics</h2>
+                      <div className="flex gap-2 text-xs">
+                         <button className="px-3 py-1 bg-nexus-indigo/20 text-nexus-indigo rounded-lg border border-nexus-indigo/30">Live View</button>
+                         <button className="px-3 py-1 bg-nexus-card text-gray-400 rounded-lg border border-nexus-border">7 Days</button>
+                         <button className="px-3 py-1 bg-nexus-card text-gray-400 rounded-lg border border-nexus-border">30 Days</button>
+                      </div>
+                   </div>
+
+                   <div className="grid grid-cols-4 gap-4 mb-8">
+                      {[
+                        { label: "TOTAL POPULATION", value: "24,812", trend: "+12%" },
+                        { label: "ACTIVE SESSIONS", value: "1,402", trend: "+5.4%" },
+                        { label: "CREDIT FLOW", value: "1.2M", trend: "+22%" },
+                        { label: "UPTIME", value: "99.99%", trend: "Stable" }
+                      ].map((metric, i) => (
+                        <div key={i} className="bg-nexus-card/50 rounded-2xl p-4 border border-nexus-border">
+                          <div className="text-[8px] text-gray-500 mb-1 font-black tracking-widest uppercase">{metric.label}</div>
+                          <div className="text-xl font-bold">{metric.value}</div>
+                          <div className="text-[9px] text-emerald-500 font-bold mt-1">{metric.trend}</div>
+                        </div>
+                      ))}
+                   </div>
+
+                   <div className="grid grid-cols-12 gap-6">
+                      <div className="col-span-8 bg-nexus-card/30 rounded-[2rem] border border-nexus-border p-6 h-[300px] flex flex-col">
+                        <div className="flex justify-between items-center mb-6">
+                          <h3 className="text-sm font-black uppercase tracking-widest text-gray-400">Population Growth Curve</h3>
+                          <div className="flex gap-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-nexus-indigo" />
+                              <span className="text-[10px] text-gray-500 font-bold uppercase">Actual</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-nexus-indigo/30" />
+                              <span className="text-[10px] text-gray-500 font-bold uppercase">Projected</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex-grow flex items-end gap-2 pb-2">
+                          {[40, 55, 45, 70, 65, 85, 75, 95, 80, 100, 90, 110].map((h, i) => (
+                            <motion.div 
+                              key={i}
+                              initial={{ height: 0 }}
+                              animate={{ height: `${h}%` }}
+                              transition={{ duration: 1, delay: i * 0.05 }}
+                              className="flex-grow bg-gradient-to-t from-nexus-indigo/50 to-nexus-indigo rounded-t-sm"
+                            />
+                          ))}
+                        </div>
+                        <div className="flex justify-between mt-2 px-1">
+                          {['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'].map(t => (
+                            <span key={t} className="text-[8px] font-bold text-gray-600 uppercase">{t}</span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="col-span-4 bg-nexus-card/30 rounded-[2rem] border border-nexus-border p-6 flex flex-col">
+                         <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-6 text-center">District Engagement</h3>
+                         <div className="flex-grow flex items-center justify-center relative">
+                            {/* Simple radial chart representation */}
+                            <div className="w-32 h-32 rounded-full border-8 border-nexus-indigo/20 flex items-center justify-center relative">
+                               <div className="absolute inset-0 rounded-full border-8 border-nexus-indigo border-t-transparent -rotate-45" />
+                               <div className="text-center">
+                                  <div className="text-xl font-black">74%</div>
+                                  <div className="text-[8px] text-gray-500 font-black uppercase">Density</div>
+                               </div>
+                            </div>
+                         </div>
+                         <div className="space-y-2 mt-4">
+                            {[
+                              { label: "Core Sector", val: 85 },
+                              { label: "Synthesis", val: 62 },
+                              { label: "Neural Net", val: 41 }
+                            ].map(s => (
+                              <div key={s.label}>
+                                <div className="flex justify-between text-[8px] font-bold text-gray-500 uppercase mb-1">
+                                  <span>{s.label}</span>
+                                  <span>{s.val}%</span>
+                                </div>
+                                <div className="w-full h-1 bg-nexus-dark rounded-full overflow-hidden">
+                                  <div className="h-full bg-nexus-indigo rounded-full" style={{ width: `${s.val}%` }} />
+                                </div>
+                              </div>
+                            ))}
+                         </div>
+                      </div>
+                   </div>
+                 </motion.div>
+               )}
+
+               {activeTab === "City Config" && (
+                 <motion.div
+                   key="config"
+                   initial={{ opacity: 0, x: 20 }}
+                   animate={{ opacity: 1, x: 0 }}
+                   exit={{ opacity: 0, x: -20 }}
+                 >
+                   <div className="flex justify-between items-center mb-8">
+                      <h2 className="text-2xl font-bold">City Configuration</h2>
+                      <button 
+                        onClick={() => triggerNotification("City Configuration Saved Successfully.")}
+                        className="px-6 py-2 bg-nexus-indigo text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all"
+                      >
+                        Save All Changes
+                      </button>
+                   </div>
+
+                   <div className="grid grid-cols-2 gap-8">
+                      <div className="space-y-6">
+                        <div className="p-6 bg-nexus-card/50 rounded-[2rem] border border-nexus-border">
+                          <h3 className="text-sm font-black uppercase tracking-widest text-nexus-indigo mb-6">Core Identity</h3>
+                          <div className="space-y-4">
+                            <div>
+                              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 block">City Name</label>
+                              <input 
+                                type="text" 
+                                defaultValue="VIRTUACITY"
+                                className="w-full bg-nexus-dark border border-nexus-border rounded-xl px-4 py-3 text-sm focus:border-nexus-indigo outline-none transition-all"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 block">Atmosphere Preset</label>
+                              <select className="w-full bg-nexus-dark border border-nexus-border rounded-xl px-4 py-3 text-sm focus:border-nexus-indigo outline-none appearance-none cursor-pointer">
+                                <option>Cyberpunk Neon</option>
+                                <option>Solarpunk Green</option>
+                                <option>Minimalist White</option>
+                                <option>Deep Space Dark</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="p-6 bg-nexus-card/50 rounded-[2rem] border border-nexus-border">
+                          <h3 className="text-sm font-black uppercase tracking-widest text-nexus-indigo mb-6">Economic Policy</h3>
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between p-3 bg-nexus-dark/50 rounded-xl border border-nexus-border">
+                              <div>
+                                <div className="text-xs font-bold">Automatic Taxation</div>
+                                <div className="text-[8px] text-gray-500 uppercase font-black">2.5% per transaction</div>
+                              </div>
+                              <div className="w-10 h-5 bg-nexus-indigo rounded-full relative cursor-pointer">
+                                <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full shadow-lg" />
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-nexus-dark/50 rounded-xl border border-nexus-border">
+                              <div>
+                                <div className="text-xs font-bold">Public Grants</div>
+                                <div className="text-[8px] text-gray-500 uppercase font-black">Enable for new creators</div>
+                              </div>
+                              <div className="w-10 h-5 bg-gray-700 rounded-full relative cursor-pointer">
+                                <div className="absolute left-1 top-1 w-3 h-3 bg-gray-400 rounded-full" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="p-6 bg-nexus-card/50 rounded-[2rem] border border-nexus-border">
+                          <h3 className="text-sm font-black uppercase tracking-widest text-nexus-indigo mb-6">Access Control (Global)</h3>
+                          <div className="space-y-4">
+                            <div>
+                              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 block">Entry Requirements</label>
+                              <div className="flex gap-2">
+                                <button className="flex-grow py-2 rounded-xl border border-nexus-indigo bg-nexus-indigo/10 text-nexus-indigo text-[10px] font-black uppercase">Open Access</button>
+                                <button className="flex-grow py-2 rounded-xl border border-nexus-border text-gray-500 text-[10px] font-black uppercase">Invite Only</button>
+                                <button className="flex-grow py-2 rounded-xl border border-nexus-border text-gray-500 text-[10px] font-black uppercase">NFT Gated</button>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 block">Max Concurrent Users</label>
+                              <input 
+                                type="range" 
+                                min="100" 
+                                max="10000" 
+                                step="100"
+                                className="w-full h-1 bg-nexus-dark rounded-full appearance-none cursor-pointer accent-nexus-indigo"
+                              />
+                              <div className="flex justify-between mt-2">
+                                <span className="text-[8px] font-bold text-gray-500">100</span>
+                                <span className="text-[8px] font-bold text-nexus-indigo">5,000 (Current)</span>
+                                <span className="text-[8px] font-bold text-gray-500">10,000</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="p-6 bg-nexus-indigo/5 border border-nexus-indigo/20 rounded-[2rem] relative overflow-hidden group">
+                           <div className="relative z-10">
+                              <h3 className="text-sm font-black uppercase tracking-widest text-nexus-indigo mb-4 flex items-center gap-2">
+                                <Zap size={16} />
+                                Neural Sync Options
+                              </h3>
+                              <p className="text-xs text-gray-400 mb-6">Propagate configuration changes across all Nexus edge nodes instantly.</p>
+                              <button className="w-full py-4 bg-nexus-indigo text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-nexus-indigo/20">
+                                Deploy To Production
+                              </button>
+                           </div>
+                           <div className="absolute top-0 right-0 w-32 h-32 bg-nexus-indigo/10 blur-[50px] rounded-full -mr-16 -mt-16" />
+                        </div>
+                      </div>
                    </div>
                  </motion.div>
                )}

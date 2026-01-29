@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Sparkles, Command, Search, Bell, Settings, User, Zap } from "lucide-react";
+import { Sparkles, Command, Search, Bell, Settings, User, Zap, ShieldAlert, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const AetheryxCore = ({ active = false, status = "Idle" }: { active?: boolean, status?: string }) => {
@@ -80,30 +80,59 @@ export const AetheryxCore = ({ active = false, status = "Idle" }: { active?: boo
   );
 };
 
-export const SpatialNotification = ({ message, type = 'info' }: { message: string, type?: 'info' | 'alert' | 'success' }) => {
+export const SpatialNotification = ({ 
+  notification, 
+  onClose 
+}: { 
+  notification: { id: string, message: string, type: 'info' | 'alert' | 'high-alert' }, 
+  onClose: () => void 
+}) => {
+  const isHighAlert = notification.type === 'high-alert';
+  
   return (
     <motion.div
-      initial={{ x: 100, opacity: 0, scale: 0.9 }}
-      animate={{ x: 0, opacity: 1, scale: 1 }}
-      exit={{ x: 100, opacity: 0, scale: 0.9 }}
+      initial={{ opacity: 0, x: 50, scale: 0.9 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      exit={{ opacity: 0, x: 20, scale: 0.95 }}
       className={cn(
-        "px-6 py-4 rounded-2xl glass-panel border flex items-center space-x-5 shadow-2xl min-w-[320px]",
-        type === 'info' ? "border-nexus-purple/20" : "border-rose-500/20"
+        "p-4 rounded-2xl border backdrop-blur-xl shadow-2xl flex items-center space-x-4 min-w-[300px] pointer-events-auto",
+        isHighAlert 
+          ? "bg-red-500/10 border-red-500/30 text-red-500"
+          : notification.type === 'alert' 
+            ? "bg-amber-500/10 border-amber-500/30 text-amber-500" 
+            : "bg-nexus-indigo/10 border-nexus-indigo/30 text-nexus-indigo"
       )}
     >
       <div className={cn(
-        "w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg",
-        type === 'info' ? "bg-gradient-to-br from-nexus-indigo to-nexus-purple" : "bg-gradient-to-br from-rose-600 to-rose-400"
+        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border shadow-lg",
+        isHighAlert 
+          ? "bg-red-500/20 border-red-500/40"
+          : notification.type === 'alert' 
+            ? "bg-amber-500/20 border-amber-500/40" 
+            : "bg-nexus-indigo/20 border-nexus-indigo/40"
       )}>
-        {type === 'info' ? <Sparkles size={20} /> : <Zap size={20} />}
+        {isHighAlert ? <ShieldAlert size={20} className="animate-pulse" /> : notification.type === 'alert' ? <ShieldAlert size={20} /> : <Zap size={20} />}
       </div>
       <div className="flex-1">
-        <div className="flex items-center justify-between">
-          <div className="text-[9px] font-mono font-bold text-gray-400 uppercase tracking-[0.2em]">System Packet</div>
-          <div className="text-[8px] font-mono text-gray-600">JUST NOW</div>
-        </div>
-        <div className="text-[12px] text-white font-sans font-medium mt-1 leading-relaxed">{message}</div>
+        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] mb-0.5">
+          {isHighAlert ? "Critical Priority" : notification.type === 'alert' ? "Security Alert" : "Nexus Update"}
+        </h4>
+        <p className="text-[11px] font-medium opacity-80">{notification.message}</p>
       </div>
+      <button 
+        onClick={onClose}
+        className="p-1.5 hover:bg-white/5 rounded-lg transition-colors shrink-0"
+      >
+        <X size={14} />
+      </button>
+
+      {isHighAlert && (
+        <motion.div 
+          className="absolute inset-0 rounded-2xl pointer-events-none border-2 border-red-500/50"
+          animate={{ opacity: [0, 0.5, 0], scale: [1, 1.05, 1] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        />
+      )}
     </motion.div>
   );
 };

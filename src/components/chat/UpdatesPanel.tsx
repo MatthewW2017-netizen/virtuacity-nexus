@@ -11,16 +11,35 @@ import {
   Bug, 
   Cpu,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  RefreshCw
 } from "lucide-react";
+import { dataService } from "@/lib/dataService";
 
 interface UpdateItem {
+  id?: string;
   type: "feature" | "fix" | "security";
   title: string;
   description: string;
+  created_at?: string;
 }
 
-const LATEST_UPDATES: UpdateItem[] = [
+const STATIC_UPDATES: UpdateItem[] = [
+  {
+    type: "feature",
+    title: "Neural Bot Workshop",
+    description: "The Bot Builder is now fully operational. Founders can construct and deploy neural units directly from the Studio OS."
+  },
+  {
+    type: "feature",
+    title: "Dynamic Role Matrix",
+    description: "New authority management system. Define custom roles like 'Architect' or 'Sentinel' with granular permissions."
+  },
+  {
+    type: "fix",
+    title: "High Alert Stability",
+    description: "Refined the emergency notification system to ensure critical alerts persist until manually acknowledged."
+  },
   {
     type: "feature",
     title: "Founder Authority Recognized",
@@ -53,7 +72,22 @@ interface UpdatesPanelProps {
 }
 
 export const UpdatesPanel: React.FC<UpdatesPanelProps> = ({ onClose }) => {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [updates, setUpdates] = useState<UpdateItem[]>(STATIC_UPDATES);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadUpdates = async () => {
+      setIsLoading(true);
+      const dynamicUpdates = await dataService.fetchSystemUpdates();
+      if (dynamicUpdates && dynamicUpdates.length > 0) {
+        // Merge dynamic updates with static ones, prioritizing dynamic
+        setUpdates([...dynamicUpdates, ...STATIC_UPDATES]);
+      }
+      setIsLoading(false);
+    };
+
+    loadUpdates();
+  }, []);
 
   const getTypeIcon = (type: UpdateItem["type"]) => {
     switch (type) {
@@ -101,27 +135,30 @@ export const UpdatesPanel: React.FC<UpdatesPanelProps> = ({ onClose }) => {
               <h2 className="text-xl font-bold tracking-tight">SYSTEM UPDATE</h2>
               <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500">
                 <Terminal size={10} />
-                <span>VERSION 2.0.5 // BUILD_SUCCESS</span>
+                <span>VERSION 2.0.6 // BUILD_SUCCESS</span>
               </div>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-white/5 rounded-full transition-colors text-gray-400 hover:text-white"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            {isLoading && <RefreshCw size={16} className="text-nexus-indigo animate-spin mr-2" />}
+            <button 
+              onClick={onClose}
+              className="p-2 hover:bg-white/5 rounded-full transition-colors text-gray-400 hover:text-white"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
         <div className="relative p-8 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
           <div className="space-y-4">
-            {LATEST_UPDATES.map((update, idx) => (
+            {updates.map((update, idx) => (
               <motion.div
-                key={idx}
+                key={update.id || idx}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.1 }}
+                transition={{ delay: idx * 0.05 }}
                 className="group relative p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-nexus-indigo/30 transition-all"
               >
                 <div className="flex gap-4">
@@ -133,7 +170,14 @@ export const UpdatesPanel: React.FC<UpdatesPanelProps> = ({ onClose }) => {
                       <span className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
                         {getTypeLabel(update.type)}
                       </span>
-                      <div className="h-[1px] w-4 bg-nexus-indigo/30" />
+                      {update.created_at && (
+                        <>
+                          <div className="h-[1px] w-4 bg-nexus-indigo/30" />
+                          <span className="text-[8px] font-mono text-nexus-indigo/60 uppercase">
+                            {new Date(update.created_at).toLocaleDateString()}
+                          </span>
+                        </>
+                      )}
                     </div>
                     <h3 className="font-bold text-white group-hover:text-nexus-indigo transition-colors">
                       {update.title}

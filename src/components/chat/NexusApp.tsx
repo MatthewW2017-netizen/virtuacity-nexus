@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MOCK_NODES, MOCK_USERS, MOCK_MESSAGES, MOCK_MODULES } from "@/lib/mockData";
 import { Message, Panel, Space, Node, Stream, District } from "@/types/chat";
 import { NexusPanel, UniversalCommandBar } from "./NexusGrid";
+import { DiagnosticOverlay } from "../DiagnosticOverlay";
 import { 
   ChatStreamPanel, NodeExplorerPanel, BotForgePanel, AssetLibraryPanel, 
   CreatorToolsPanel, NeuralGraphPanel, TacticalMapPanel, ProfilePanel,
@@ -29,6 +30,175 @@ import {
 } from "lucide-react";
 
 
+// --- Sub-components (extracted to top-level for stability) ---
+
+const GovernanceHUD = ({ activeSpaceId }: { activeSpaceId: string }) => {
+  // Only show alerts in the Governance space or if there is a global alert
+  const hasGlobalAlert = false; // We can make this dynamic later
+  if (activeSpaceId !== 'governance' && !hasGlobalAlert) return null;
+  
+  return (
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="fixed right-6 top-24 z-[100] w-64 space-y-4"
+    >
+      {activeSpaceId === 'governance' && (
+        <div className="p-6 rounded-[2rem] bg-black/40 backdrop-blur-3xl border border-white/10 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-nexus-indigo/10 blur-[40px] rounded-full" />
+          <div className="relative z-10">
+            <div className="text-[10px] font-black text-nexus-indigo uppercase tracking-[0.3em] mb-4">Governance Metrics</div>
+            <div className="space-y-4">
+              {[
+                { label: 'Transparency Score', value: '98.4', unit: '%', color: 'text-emerald-500' },
+                { label: 'Active Appeals', value: '12', unit: ' cases', color: 'text-amber-500' },
+                { label: 'AI Moderation RT', value: '4ms', unit: '', color: 'text-blue-500' },
+              ].map((metric, i) => (
+                <div key={i}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">{metric.label}</span>
+                    <span className={cn("text-[10px] font-black uppercase", metric.color)}>{metric.value}{metric.unit}</span>
+                  </div>
+                  <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: '70%' }}
+                      className={cn("h-full", metric.color.replace('text-', 'bg-'))}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hasGlobalAlert && (
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 backdrop-blur-xl">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-xl bg-rose-500/20 flex items-center justify-center border border-rose-500/30">
+              <ShieldAlert className="text-rose-500" size={16} />
+            </div>
+            <div>
+              <div className="text-[8px] font-black text-rose-500 uppercase tracking-widest">High Alert</div>
+              <div className="text-[10px] font-bold text-white uppercase tracking-tighter">Sector 4 Instability</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
+interface SpaceSwitcherProps {
+  spaces: Record<string, Space>;
+  activeSpaceId: string;
+  handleSpaceSwitch: (id: string) => void;
+  currentUserRole: string;
+  router: any;
+  setShowOnboarding: (show: boolean) => void;
+}
+
+const SpaceSwitcher = ({ 
+  spaces, 
+  activeSpaceId, 
+  handleSpaceSwitch, 
+  currentUserRole, 
+  router, 
+  setShowOnboarding 
+}: SpaceSwitcherProps) => {
+  const spaceIcons: Record<string, any> = {
+    social: Users,
+    studio: Sparkles,
+    creator: Wrench,
+    ai: Cpu,
+    gaming: Zap,
+    personal: Layout,
+    'city-browser': Globe,
+    'dev-grid': Code,
+    'governance': Shield,
+    'engineering': Activity,
+  };
+
+  return (
+    <div className="absolute top-28 left-8 flex flex-col space-y-3 max-h-[calc(100vh-250px)] overflow-y-auto no-scrollbar pr-4 py-2 group/sidebar pointer-events-auto">
+      {/* Sidebar Label (Subtle) */}
+      <div className="ml-2 mb-2">
+        <div className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] group-hover/sidebar:text-white/40 transition-colors">Workspace Spaces</div>
+      </div>
+
+      <div className="flex flex-col space-y-2">
+        {(Object.keys(spaces) as Space['id'][])
+          .filter(spaceId => {
+            if (spaceId === 'engineering') return currentUserRole === 'Founder';
+            return true;
+          })
+          .map((spaceId) => {
+          const Icon = spaceIcons[spaceId] || Layout;
+          const isActive = activeSpaceId === spaceId;
+          return (
+            <button
+              key={spaceId}
+              onClick={() => handleSpaceSwitch(spaceId)}
+              className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 group relative border shrink-0",
+                isActive 
+                  ? "bg-nexus-indigo text-white border-white/20 shadow-[0_0_20px_rgba(75,63,226,0.3)]" 
+                  : "bg-white/5 text-gray-500 border-white/5 hover:bg-white/10 hover:text-white hover:border-white/10"
+              )}
+            >
+              <Icon size={18} />
+              
+              {/* Tooltip - Professional Style */}
+              <div className="absolute left-full ml-4 px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-2xl">
+                <div className="text-[10px] font-bold text-white uppercase tracking-widest">{spaces[spaceId].name}</div>
+                <div className="text-[8px] text-gray-500 font-medium mt-0.5">Switch to this workspace</div>
+              </div>
+
+              {/* Active Glow Bar */}
+              {isActive && (
+                <motion.div 
+                  layoutId="activeSpaceIndicator"
+                  className="absolute -left-3 w-1 h-6 bg-nexus-indigo rounded-full shadow-[0_0_10px_#4b3fe2]"
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="w-8 h-[1px] bg-white/10 ml-1 my-4" />
+
+      {/* Founder-only Studio OS Access - Enhanced */}
+      {currentUserRole === 'Founder' && (
+        <button
+          onClick={() => router.push("/studio-os")}
+          className="w-10 h-10 rounded-xl bg-nexus-indigo text-white flex items-center justify-center transition-all group relative border border-nexus-indigo/50 hover:scale-110 shadow-[0_0_20px_rgba(75,63,226,0.4)] shrink-0"
+        >
+          <Layout size={18} />
+          <div className="absolute left-full ml-4 px-3 py-2 bg-[#0A0A0B] border border-nexus-indigo/40 rounded-lg opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-2xl">
+            <div className="text-[10px] font-black text-nexus-indigo uppercase tracking-[0.2em]">Studio OS (Admin)</div>
+            <div className="text-[8px] text-white/60 font-medium mt-0.5">Enter Founder Control Suite</div>
+          </div>
+          {/* Pulsing indicator for importance */}
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-nexus-indigo rounded-full border-2 border-black animate-pulse" />
+        </button>
+      )}
+
+      <button
+        onClick={() => setShowOnboarding(true)}
+        className="w-10 h-10 rounded-xl bg-nexus-cyan/5 text-nexus-cyan hover:bg-nexus-cyan/10 flex items-center justify-center transition-all group relative border border-nexus-cyan/10 hover:border-nexus-cyan/30 shrink-0"
+      >
+        <Sparkles size={18} />
+        <div className="absolute left-full ml-4 px-3 py-2 bg-[#0A0A0B] border border-nexus-cyan/20 rounded-lg opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-2xl">
+          <div className="text-[10px] font-bold text-nexus-cyan uppercase tracking-widest">Aetheryx Guide</div>
+          <div className="text-[8px] text-nexus-cyan/60 font-medium mt-0.5">Initialize tutorial sequence</div>
+        </div>
+      </button>
+    </div>
+  );
+};
+
 export default function NexusApp() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -50,22 +220,90 @@ export default function NexusApp() {
   const [focusedPanelId, setFocusedPanelId] = useState<string | null>(null);
   const [showCreateCityModal, setShowCreateCityModal] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
-  const [notifications, setNotifications] = useState<{id: string, message: string, type: 'info' | 'alert'}[]>([]);
+  const [notifications, setNotifications] = useState<{id: string, message: string, type: 'info' | 'alert' | 'high-alert'}[]>([]);
   const [customSpaces, setCustomSpaces] = useState<Record<string, Space>>({});
   const [isAetheryxActive, setIsAetheryxActive] = useState(false);
   const [aetheryxStatus, setAetheryxStatus] = useState("Idle");
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('connecting');
+  const [studioBots, setStudioBots] = useState<any[]>([]);
 
-  const CURRENT_VERSION = "2.0.5"; // Increment version for "What's New" check
+  const CURRENT_VERSION = "2.0.6"; // Increment version for "What's New" check
 
   // Role Logic
-  const activeNode = useMemo(() => nodes.find(n => n.id === activeNodeId), [nodes, activeNodeId]);
+  const activeNode = useMemo(() => {
+    if (!nodes || nodes.length === 0) return null;
+    const node = nodes.find(n => n.id === activeNodeId);
+    return node || nodes[0] || null;
+  }, [nodes, activeNodeId]);
+  
+  const isPlatformFounder = useMemo(() => {
+    if (!user) return false;
+    const founderEmails = [
+      'owner@virtuacity.nexus', 
+      'mattheww2017@netizens-projects.vercel.app',
+      'mattheww2017@gmail.com'
+    ];
+    return founderEmails.includes(user.email || '');
+  }, [user]);
+
   const currentUserRole = useMemo(() => {
-    if (!user || !activeNode) return 'Citizen';
-    // If the user owns the city, they are the Founder
-    if (activeNode.ownerId === user.id) return 'Founder';
+    if (!user) return 'Citizen';
+    if (isPlatformFounder) return 'Founder';
+    if (activeNode && activeNode.ownerId === user.id) return 'Founder';
     return 'Citizen';
-  }, [user, activeNode]);
+  }, [user, activeNode, isPlatformFounder]);
+
+  // Active Stream Logic
+  const activeStream = useMemo(() => {
+    if (!activeNode || !activeNode.streams || activeNode.streams.length === 0) return null;
+    if (!activeStreamId) return activeNode.streams[0];
+    const stream = activeNode.streams.find(s => s.id === activeStreamId);
+    return stream || activeNode.streams[0] || null;
+  }, [activeNode, activeStreamId]);
+
+  // Messages for active stream
+  const activeMessages = useMemo(() => {
+    if (!activeStream || !messages) return [];
+    return messages[activeStream.id] || [];
+  }, [activeStream, messages]);
+
+  // Fetch Studio State (Bots, Team, etc.)
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchStudioState = async () => {
+      const { data, error } = await supabase
+        .from('studio_state')
+        .select('bots')
+        .eq('user_id', user.id)
+        .single();
+
+      if (data?.bots) {
+        setStudioBots(data.bots);
+      }
+    };
+
+    fetchStudioState();
+
+    // Subscribe to studio_state changes
+    const channel = supabase
+      .channel(`studio-state-${user.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'studio_state',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        if (payload.new.bots) {
+          setStudioBots(payload.new.bots);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -80,8 +318,45 @@ export default function NexusApp() {
         id: 'social',
         name: 'Social Space',
         panels: [
-          { id: "shared-explorer", type: "node-explorer", title: "Node Explorer", x: 60, y: 160, width: 320, height: 550, zIndex: 10, data: { nodes } },
-          { id: "shared-chat", type: "chat", title: "Data Stream // Central", x: 420, y: 140, width: 500, height: 700, zIndex: 20, data: { streamId: "s1", nodes } }
+          { 
+            id: "shared-explorer", 
+            type: "node-explorer", 
+            title: "Node Explorer", 
+            x: 60, 
+            y: 160, 
+            width: 320, 
+            height: 550, 
+            zIndex: 10, 
+            data: { 
+              nodes, 
+              activeNodeId,
+              onSelectNode: (id: string) => {
+                setActiveNodeId(id);
+                addNotification(`Synchronizing with ${nodes.find(n => n.id === id)?.name || 'Civilization'}...`, 'info');
+              }
+            } 
+          },
+          { 
+            id: "shared-chat", 
+            type: "chat", 
+            title: "Data Stream // Central", 
+            x: 420, 
+            y: 140, 
+            width: 500, 
+            height: 700, 
+            zIndex: 20, 
+            data: { 
+              streamId: activeStreamId, 
+              nodes,
+              currentUserRole,
+              messages: activeMessages,
+              onSendMessage: async (content: string) => {
+                if (activeStreamId) {
+                  await dataService.sendMessage(activeStreamId, content, user?.id || 'u1');
+                }
+              }
+            } 
+          }
         ]
       },
       'city-browser': {
@@ -105,6 +380,7 @@ export default function NexusApp() {
                 if (streamId) setActiveStreamId(streamId);
                 addNotification(`Synchronizing with ${nodes.find(n => n.id === id)?.name || 'Civilization'}...`, 'info');
               },
+              onCreateCity: () => setShowCreateCityModal(true),
               onCreateStream: async (cityId: string, name: string) => {
                 const newStream = await dataService.createStream(cityId, name);
                 if (newStream) {
@@ -134,7 +410,7 @@ export default function NexusApp() {
         id: 'studio',
         name: 'Creative Studio',
         panels: [
-          { id: "shared-forge", type: "bot-forge", title: "AETHERYX Bot Forge", x: 100, y: 100, width: 400, height: 500, zIndex: 10 },
+          { id: "shared-forge", type: "bot-forge", title: "AETHERYX Bot Forge", x: 100, y: 100, width: 400, height: 500, zIndex: 10, data: { bots: studioBots } },
           { id: "shared-chat", type: "chat", title: "Project Stream", x: 550, y: 100, width: 600, height: 700, zIndex: 20, data: { streamId: "s3" } }
         ]
       },
@@ -230,11 +506,13 @@ export default function NexusApp() {
 
   // Space management
   const activeSpace = useMemo(() => {
-    return customSpaces[activeSpaceId] || spaces[activeSpaceId];
+    if (!spaces) return null;
+    return (customSpaces && customSpaces[activeSpaceId]) || (spaces && spaces[activeSpaceId]) || spaces?.['social'];
   }, [activeSpaceId, customSpaces, spaces]);
 
   const setPanels = (newPanels: Panel[] | ((prev: Panel[]) => Panel[])) => {
-    const currentPanels = activeSpace.panels;
+    if (!activeSpace || !activeSpaceId) return;
+    const currentPanels = activeSpace.panels || [];
     const updatedPanels = typeof newPanels === 'function' ? newPanels(currentPanels) : newPanels;
     
     setCustomSpaces(prev => ({
@@ -335,7 +613,7 @@ export default function NexusApp() {
 
   if (authLoading) {
     return (
-      <div className="h-screen w-full bg-nexus-dark flex flex-col items-center justify-center">
+      <div className="h-screen w-full bg-[#0A0A0B] flex flex-col items-center justify-center">
         <div className="relative">
           <motion.div
             animate={{ rotate: 360 }}
@@ -401,15 +679,19 @@ export default function NexusApp() {
     };
   }, []);
 
-  const currentSpace = spaces[activeSpaceId];
-  const panels = currentSpace.panels;
+  const currentSpace = spaces[activeSpaceId] || spaces['social'];
+  const panels = currentSpace?.panels || [];
 
-  const addNotification = (message: string, type: 'info' | 'alert' = 'info') => {
+  const addNotification = (message: string, type: 'info' | 'alert' | 'high-alert' = 'info') => {
     const id = Math.random().toString(36).substring(7);
     setNotifications(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
-    }, 5000);
+    
+    // Auto-dismiss for non-high-alert notifications
+    if (type !== 'high-alert') {
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+      }, 5000);
+    }
   };
 
   const handleToggleModule = (moduleId: string) => {
@@ -422,17 +704,18 @@ export default function NexusApp() {
       if (node.id === activeNodeId) {
         return {
           ...node,
-          streams: node.streams.map(stream => {
+          streams: (node.streams || []).map(stream => {
             if (stream.id === activeStreamId) {
-              const hasModule = stream.modules.includes(moduleId);
+              const currentModules = stream.modules || [];
+              const hasModule = currentModules.includes(moduleId);
               if (!hasModule && mod) addNotification(`Injected ${mod.name} into stream.`, 'info');
               else if (mod) addNotification(`Extracted ${mod.name} from stream.`, 'alert');
               
               return {
                 ...stream,
                 modules: hasModule 
-                  ? stream.modules.filter(id => id !== moduleId)
-                  : [...stream.modules, moduleId]
+                  ? currentModules.filter(id => id !== moduleId)
+                  : [...currentModules, moduleId]
               };
             }
             return stream;
@@ -470,6 +753,7 @@ export default function NexusApp() {
 
   const handleFocus = (id: string) => {
     setPanels(prev => {
+      if (!prev || prev.length === 0) return prev;
       const maxZ = Math.max(...prev.map(p => p.zIndex), 0);
       return prev.map(p => p.id === id ? { ...p, zIndex: maxZ + 1 } : p);
     });
@@ -491,15 +775,15 @@ export default function NexusApp() {
   };
 
   const handleClose = (id: string) => {
-    setPanels(prev => prev.filter(p => p.id !== id));
+    setPanels(prev => (prev || []).filter(p => p.id !== id));
   };
 
   const handleMinimize = (id: string) => {
-    setPanels(prev => prev.map(p => p.id === id ? { ...p, isMinimized: !p.isMinimized } : p));
+    setPanels(prev => (prev || []).map(p => p.id === id ? { ...p, isMinimized: !p.isMinimized } : p));
   };
 
   const handleResize = (id: string, width: number, height: number) => {
-    setPanels(prev => prev.map(p => p.id === id ? { ...p, width, height } : p));
+    setPanels(prev => (prev || []).map(p => p.id === id ? { ...p, width, height } : p));
   };
 
   const handleCreateCity = async (cityData: Partial<Node>) => {
@@ -661,10 +945,15 @@ export default function NexusApp() {
     }
   };
 
-  const activeStream = activeNode?.streams.find(s => s.id === activeStreamId) || activeNode?.streams[0];
-  const activeStreamModules = MOCK_MODULES.filter(m => activeStream?.modules.includes(m.id));
+  const activeStreamModules = useMemo(() => {
+    if (!activeStream || !activeStream.modules) return [];
+    return MOCK_MODULES.filter(m => activeStream.modules?.includes(m.id));
+  }, [activeStream]);
 
-  const maxZIndex = useMemo(() => Math.max(...panels.map(p => p.zIndex), 0), [panels]);
+  const maxZIndex = useMemo(() => {
+    if (panels.length === 0) return 0;
+    return Math.max(...panels.map(p => p.zIndex));
+  }, [panels]);
 
   const spaceIcons: Record<string, any> = {
     social: Users,
@@ -678,133 +967,6 @@ export default function NexusApp() {
     'governance': Shield,
     'engineering': Activity,
   };
-
-  const GovernanceHUD = () => {
-    if (activeSpaceId !== 'governance') return null;
-    return (
-      <motion.div 
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="fixed right-6 top-24 z-[100] w-64 space-y-4"
-      >
-        <div className="p-6 rounded-[2rem] bg-black/40 backdrop-blur-3xl border border-white/10 shadow-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-nexus-indigo/10 blur-[40px] rounded-full" />
-          <div className="relative z-10">
-            <div className="text-[10px] font-black text-nexus-indigo uppercase tracking-[0.3em] mb-4">Governance Metrics</div>
-            <div className="space-y-4">
-              {[
-                { label: 'Transparency Score', value: '98.4', unit: '%', color: 'text-emerald-500' },
-                { label: 'Active Appeals', value: '12', unit: ' cases', color: 'text-amber-500' },
-                { label: 'AI Moderation RT', value: '4ms', unit: '', color: 'text-blue-500' },
-              ].map((metric, i) => (
-                <div key={i}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">{metric.label}</span>
-                    <span className={cn("text-[10px] font-black uppercase", metric.color)}>{metric.value}{metric.unit}</span>
-                  </div>
-                  <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: '70%' }}
-                      className={cn("h-full", metric.color.replace('text-', 'bg-'))}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 backdrop-blur-xl">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-xl bg-rose-500/20 flex items-center justify-center border border-rose-500/30">
-              <ShieldAlert className="text-rose-500" size={16} />
-            </div>
-            <div>
-              <div className="text-[8px] font-black text-rose-500 uppercase tracking-widest">High Alert</div>
-              <div className="text-[10px] font-bold text-white uppercase tracking-tighter">Sector 4 Instability</div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    );
-  };
-
-  const SpaceSwitcher = () => (
-    <div className="absolute top-28 left-8 flex flex-col space-y-3 max-h-[calc(100vh-250px)] overflow-y-auto no-scrollbar pr-4 py-2 group/sidebar pointer-events-auto">
-      {/* Sidebar Label (Subtle) */}
-      <div className="ml-2 mb-2">
-        <div className="text-[8px] font-black text-white/20 uppercase tracking-[0.3em] group-hover/sidebar:text-white/40 transition-colors">Workspace Spaces</div>
-      </div>
-
-      <div className="flex flex-col space-y-2">
-        {(Object.keys(spaces) as Space['id'][])
-          .filter(spaceId => {
-            if (spaceId === 'engineering') return currentUserRole === 'Founder';
-            return true;
-          })
-          .map((spaceId) => {
-          const Icon = spaceIcons[spaceId] || Layout;
-          const isActive = activeSpaceId === spaceId;
-          return (
-            <button
-              key={spaceId}
-              onClick={() => handleSpaceSwitch(spaceId)}
-              className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 group relative border shrink-0",
-                isActive 
-                  ? "bg-nexus-indigo text-white border-white/20 shadow-[0_0_20px_rgba(75,63,226,0.3)]" 
-                  : "bg-white/5 text-gray-500 border-white/5 hover:bg-white/10 hover:text-white hover:border-white/10"
-              )}
-            >
-              <Icon size={18} />
-              
-              {/* Tooltip - Professional Style */}
-              <div className="absolute left-full ml-4 px-3 py-2 bg-[#0A0A0B] border border-white/10 rounded-lg opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-2xl">
-                <div className="text-[10px] font-bold text-white uppercase tracking-widest">{spaces[spaceId].name}</div>
-                <div className="text-[8px] text-gray-500 font-medium mt-0.5">Switch to this workspace</div>
-              </div>
-
-              {/* Active Glow Bar */}
-              {isActive && (
-                <motion.div 
-                  layoutId="activeSpaceIndicator"
-                  className="absolute -left-3 w-1 h-6 bg-nexus-indigo rounded-full shadow-[0_0_10px_#4b3fe2]"
-                />
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="w-8 h-[1px] bg-white/5 ml-1 my-2" />
-
-      {/* Founder-only Studio OS Access */}
-      {currentUserRole === 'Founder' && (
-        <button
-          onClick={() => router.push("/studio-os")}
-          className="w-10 h-10 rounded-xl bg-nexus-indigo/10 text-nexus-indigo hover:bg-nexus-indigo hover:text-white flex items-center justify-center transition-all group relative border border-nexus-indigo/20 hover:border-nexus-indigo/50 shrink-0"
-        >
-          <Layout size={18} />
-          <div className="absolute left-full ml-4 px-3 py-2 bg-[#0A0A0B] border border-nexus-indigo/20 rounded-lg opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-2xl">
-            <div className="text-[10px] font-bold text-nexus-indigo uppercase tracking-widest">Studio OS</div>
-            <div className="text-[8px] text-nexus-indigo/60 font-medium mt-0.5">Access Founder Dashboard</div>
-          </div>
-        </button>
-      )}
-
-      <button
-        onClick={() => setShowOnboarding(true)}
-        className="w-10 h-10 rounded-xl bg-nexus-cyan/5 text-nexus-cyan hover:bg-nexus-cyan/10 flex items-center justify-center transition-all group relative border border-nexus-cyan/10 hover:border-nexus-cyan/30 shrink-0"
-      >
-        <Sparkles size={18} />
-        <div className="absolute left-full ml-4 px-3 py-2 bg-[#0A0A0B] border border-nexus-cyan/20 rounded-lg opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all duration-200 pointer-events-none whitespace-nowrap z-50 shadow-2xl">
-          <div className="text-[10px] font-bold text-nexus-cyan uppercase tracking-widest">Aetheryx Guide</div>
-          <div className="text-[8px] text-nexus-cyan/60 font-medium mt-0.5">Initialize tutorial sequence</div>
-        </div>
-      </button>
-    </div>
-  );
 
   // Fetch messages when stream changes and subscribe to real-time
   useEffect(() => {
@@ -1168,7 +1330,10 @@ export default function NexusApp() {
 
   const handleJoinDistrict = (cityId: string, districtId?: string, streamId?: string) => {
     const node = nodes.find(n => n.id === cityId);
-    if (!node) return;
+    if (!node) {
+      addNotification("Civilization coordinates lost. Attempting to recalibrate...", 'alert');
+      return;
+    }
 
     setActiveNodeId(cityId);
     
@@ -1183,8 +1348,8 @@ export default function NexusApp() {
       zoom: 1.5
     });
 
-    const district = districtId ? node.districts?.find(d => d.id === districtId) : null;
-    const finalStreamId = streamId || (district ? district.streams[0] : node.streams[0]?.id);
+    const district = districtId ? (node.districts || []).find(d => d.id === districtId) : null;
+    const finalStreamId = streamId || (district ? (district.streams || [])[0] : (node.streams || [])[0]?.id);
 
     if (finalStreamId) {
       setActiveStreamId(finalStreamId);
@@ -1216,7 +1381,7 @@ export default function NexusApp() {
         }
       };
 
-      const personality = personalities[category] || personalities['Social'];
+      const personality = personalities[category as string] || personalities['Social'];
       setAetheryxStatus(personality.label);
       addNotification(personality.notification, 'info');
       
@@ -1253,8 +1418,8 @@ export default function NexusApp() {
             ]
           };
 
-          const category = node.category as keyof typeof layoutConfig || 'Social';
-          const templates = layoutConfig[category] || layoutConfig['Social'];
+          const layoutCategory = (node.category as keyof typeof layoutConfig) || 'Social';
+          const templates = layoutConfig[layoutCategory] || layoutConfig['Social'];
 
           // Smart Update: Update existing panels or add new ones without resetting everything
           templates.forEach((t, i) => {
@@ -1293,7 +1458,17 @@ export default function NexusApp() {
   };
 
   const renderPanelContent = (panel: Panel) => {
-    if (panel.type === 'chat' && activeStream) {
+    // Defensive check for active stream in chat panels
+    if (panel.type === 'chat') {
+      if (!activeStream) {
+        return (
+          <div className="flex flex-col items-center justify-center h-full text-nexus-indigo/40 font-mono text-xs uppercase tracking-widest p-8 text-center">
+            <Activity className="mb-4 animate-pulse" size={24} />
+            Recalibrating Data Stream...
+            <div className="mt-2 text-[8px]">Awaiting stabilization of civilization coordinates</div>
+          </div>
+        );
+      }
       return (
         <ChatStreamPanel 
           messages={messages[activeStreamId] || []}
@@ -1411,9 +1586,15 @@ export default function NexusApp() {
 
   const handleSpaceSwitch = (spaceId: Space['id']) => {
     if (spaceId === activeSpaceId) return;
+    
+    const targetSpace = spaces[spaceId];
+    if (!targetSpace) {
+      addNotification("Spatial coordinates not found for this workspace.", 'alert');
+      return;
+    }
 
     setIsAetheryxActive(true);
-    setAetheryxStatus(`Calibrating Space: ${spaces[spaceId].name.toUpperCase()}...`);
+    setAetheryxStatus(`Calibrating Space: ${targetSpace.name.toUpperCase()}...`);
     setIsWarping(true);
     
     // Cinematic spatial pull-back with a slight rotation for "warp" feel
@@ -1436,10 +1617,9 @@ export default function NexusApp() {
   };
 
   return (
-    <DebugProvider>
-      <div className="relative h-screen w-full bg-nexus-dark overflow-hidden font-sans selection:bg-nexus-purple/30 selection:text-white">
-        {/* HUD Elements (Global) */}
-        <GovernanceHUD />
+    <div className="relative h-screen w-full bg-[#0A0A0B] overflow-hidden font-sans selection:bg-nexus-purple/30 selection:text-white">
+      {/* HUD Elements (Global) */}
+      <GovernanceHUD activeSpaceId={activeSpaceId} />
       
       {/* Warp Visual Overlay */}
       <AnimatePresence>
@@ -1485,6 +1665,7 @@ export default function NexusApp() {
         {showCreateCityModal && (
           <CreateCityModal
             isOpen={showCreateCityModal}
+            isFounder={isPlatformFounder}
             onClose={() => setShowCreateCityModal(false)}
             onCreate={handleCreateCity}
           />
@@ -1560,64 +1741,8 @@ export default function NexusApp() {
       </motion.div>
 
       {/* Static HUD Layer (Above Canvas) */}
-      {/* Debug Overlay */}
+      <DiagnosticOverlay />
       <AnimatePresence>
-        {showDebug && (
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            className="fixed top-20 right-4 w-72 bg-black/80 backdrop-blur-xl border border-nexus-indigo/30 rounded-2xl p-4 z-[9999] font-mono text-[10px] text-nexus-indigo pointer-events-auto"
-          >
-            <div className="flex items-center justify-between mb-3 border-b border-nexus-indigo/20 pb-2">
-              <span className="font-bold uppercase tracking-widest flex items-center gap-2">
-                <Code size={12} /> System Debug
-              </span>
-              <button onClick={() => setShowDebug(false)} className="hover:text-white">✕</button>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="opacity-50">IDENTITY:</span>
-                <span className="text-white truncate max-w-[150px]">{user?.email || 'NOT_LOGGED_IN'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="opacity-50">ROLE:</span>
-                <span className={cn(
-                  "font-bold",
-                  currentUserRole === 'Founder' ? "text-yellow-400" : "text-nexus-indigo"
-                )}>{currentUserRole}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="opacity-50">ACTIVE_CITY:</span>
-                <span className="text-white truncate max-w-[150px]">{nodes.find(n => n.id === activeNodeId)?.name || 'NONE'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="opacity-50">DB_NODES:</span>
-                <span className="text-white">{nodes.length}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="opacity-50">AUTH_STATUS:</span>
-                <span className="text-white">{authLoading ? 'LOADING' : 'READY'}</span>
-              </div>
-              <div className="flex justify-between border-t border-nexus-indigo/10 pt-2 mt-2">
-                <span className="opacity-50">DEPLOYMENT:</span>
-                <span className="text-emerald-400 font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  LIVE_SYNC
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="opacity-50">AUTO_UPDATE:</span>
-                <span className="text-white">ENABLED</span>
-              </div>
-              <div className="mt-4 pt-2 border-t border-nexus-indigo/10 text-[9px] opacity-40 leading-relaxed">
-                CTRL + D TO TOGGLE OVERLAY<br/>
-                SYNC: REAL-TIME DB ENABLED
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <div className="absolute inset-0 pointer-events-none z-[1000]">
         <div className="pointer-events-none h-full w-full relative">
@@ -1630,7 +1755,7 @@ export default function NexusApp() {
           <div className="absolute top-8 left-10 flex flex-col space-y-1.5 opacity-80">
             <div className="flex items-center space-x-2">
               <div className="text-[10px] font-black text-white uppercase tracking-[0.4em] flex items-center gap-2">
-                Nexus Grid OS <span className="text-nexus-cyan">v4.0.6-TEST</span>
+                Nexus Grid OS <span className="text-nexus-cyan">v2.0.6-STABLE</span>
                 {currentUserRole === 'Founder' && (
                   <motion.span 
                     initial={{ opacity: 0, x: -10 }}
@@ -1668,7 +1793,14 @@ export default function NexusApp() {
           </div>
 
           {/* Space Switcher HUD */}
-          <SpaceSwitcher />
+          <SpaceSwitcher 
+            spaces={spaces}
+            activeSpaceId={activeSpaceId}
+            handleSpaceSwitch={handleSpaceSwitch}
+            currentUserRole={currentUserRole}
+            router={router}
+            setShowOnboarding={setShowOnboarding}
+          />
         </div>
       </div>
 
@@ -1719,6 +1851,5 @@ export default function NexusApp() {
         </div>
       </div>
     </div>
-  </DebugProvider>
-);
+  );
 }

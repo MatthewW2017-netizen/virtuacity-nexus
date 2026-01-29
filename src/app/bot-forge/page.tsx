@@ -41,9 +41,9 @@ export default function BotForgePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
           >
-            <Link href="/early-access">
-              <Button size="lg" className="gap-2">
-                Start Building Now <ArrowRight size={18} />
+            <Link href="/nexus">
+              <Button size="lg" className="gap-2 bg-nexus-indigo hover:bg-nexus-indigo-light text-white border-none shadow-[0_0_20px_rgba(75,63,226,0.3)]">
+                Initialize Forge <ArrowRight size={18} />
               </Button>
             </Link>
           </motion.div>

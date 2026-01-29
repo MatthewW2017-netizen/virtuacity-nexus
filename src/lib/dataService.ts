@@ -207,5 +207,29 @@ export const dataService = {
     } catch (err) {
       console.warn(`[${level.toUpperCase()}] ${source}: ${message}`, details || '');
     }
+  },
+
+  async fetchSystemUpdates(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('system_updates')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error) {
+      console.error('Error fetching system updates:', error);
+      return [];
+    }
+    return data || [];
+  },
+
+  async createSystemUpdate(type: 'feature' | 'fix' | 'security', title: string, description: string) {
+    const { error } = await supabase
+      .from('system_updates')
+      .insert({ type, title, description, created_at: new Date().toISOString() });
+
+    if (error) {
+      console.error('Error creating system update:', error);
+    }
   }
 };
