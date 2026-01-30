@@ -1,45 +1,19 @@
-import type { Metadata } from "next";
-import { Syne, Quicksand, JetBrains_Mono } from "next/font/google";
-import "@/styles/globals.css";
-import { AuthProvider } from "@/context/AuthContext";
-import { DebugProvider } from "@/components/debug/DebugEngine";
+import '@/styles/globals.css'
+import React from 'react'
+import Navbar from '@/components/Navbar'
 
-const syne = Syne({ 
-  subsets: ["latin"],
-  variable: "--font-nexus-header",
-  weight: ["400", "500", "600", "700", "800"],
-});
+export const metadata = {
+  title: 'VirtuaCity Nexus',
+  description: 'Rebuilt minimal shell',
+}
 
-const quicksand = Quicksand({
-  subsets: ["latin"],
-  variable: "--font-nexus-soft",
-  weight: ["300", "400", "500", "600", "700"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-nexus-mono",
-});
-
-export const metadata: Metadata = {
-  title: "VirtuaCity Nexus | Where every world connects",
-  description: "The official front door of the VirtuaCity Nexus platform. Clean, cinematic, and future-proof.",
-};
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${syne.variable} ${quicksand.variable} ${jetbrainsMono.variable} font-soft bg-nexus-dark text-white min-h-screen antialiased`}>
-        <DebugProvider>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-        </DebugProvider>
+    <html lang="en">
+      <body className="bg-black text-white min-h-screen">
+        <Navbar />
+        <main className="max-w-4xl mx-auto p-6">{children}</main>
       </body>
     </html>
-  );
+  )
 }
