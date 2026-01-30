@@ -1,18 +1,17 @@
-import '@/styles/globals.css'
-import React from 'react'
-import Navbar from '@/components/Navbar'
+import './globals.css'
+import Navbar from '../components/Navbar'
 
 export const metadata = {
   title: 'VirtuaCity Nexus',
-  description: 'Rebuilt minimal shell',
+  description: 'Minimal scaffold'
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-black text-white min-h-screen">
+      <body>
         <Navbar />
-        <main className="max-w-4xl mx-auto p-6">{children}</main>
+        <div className="max-w-4xl mx-auto">{children}</div>
       </body>
     </html>
   )

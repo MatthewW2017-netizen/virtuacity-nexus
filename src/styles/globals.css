@@ -1,14 +1,12 @@
-:root{ --bg:#000; }
-html,body{height:100%}
-body{background:var(--bg); color:#fff; font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto}
-a{color:inherit}
-.bg-white\/5{background:rgba(255,255,255,0.05)}
-.text-gray-300{color:#d1d5db}
-.text-gray-400{color:#9ca3af}
-.text-sm{font-size:0.9rem}
-.text-xs{font-size:0.75rem}
-.p-6{padding:1.5rem}
-.p-4{padding:1rem}
-.rounded{border-radius:0.5rem}
-.max-w-4xl{max-width:64rem}
-.mx-auto{margin-left:auto;margin-right:auto}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #__next {
+  height: 100%;
+}
+
+body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: #f8fafc;
+}

@@ -1,16 +1,14 @@
-import React from 'react'
-
-export default function Navbar(){
+export default function Navbar() {
   return (
-    <nav className="w-full bg-white/3 p-4 border-b border-white/5">
-      <div className="max-w-4xl mx-auto flex items-center justify-between">
-        <div className="font-black">VirtuaCity</div>
-        <div className="space-x-3">
-          <a href="/" className="text-sm text-gray-300">Home</a>
-          <a href="/rebuild" className="text-sm text-gray-300">Rebuild</a>
-          <a href="/nexus" className="text-sm text-gray-300">Nexus</a>
-        </div>
+    <header className="bg-white border-b">
+      <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="text-xl font-semibold">VirtuaCity Nexus</div>
+        <nav className="space-x-4 text-sm text-gray-600">
+          <a href="/nexus">Nexus</a>
+          <a href="/login">Login</a>
+          <a href="/signup">Signup</a>
+        </nav>
       </div>
-    </nav>
+    </header>
   )
 }

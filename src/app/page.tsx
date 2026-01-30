@@ -1,14 +1,8 @@
-import React from 'react'
-
-export default function Home(){
+export default function HomePage() {
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-black">VirtuaCity Nexus</h1>
-      <p className="text-gray-300">Clean rebuild — minimal shell. Add features incrementally.</p>
-      <div className="p-4 bg-white/5 rounded">
-        <h2 className="font-bold">Welcome</h2>
-        <p className="text-sm text-gray-400">Use `/rebuild` routes or extend this scaffold.</p>
-      </div>
-    </div>
+    <main className="p-8">
+      <h1 className="text-3xl font-bold">VirtuaCity Nexus</h1>
+      <p className="mt-4 text-gray-600">Fresh scaffold — add features back incrementally.</p>
+    </main>
   )
 }
