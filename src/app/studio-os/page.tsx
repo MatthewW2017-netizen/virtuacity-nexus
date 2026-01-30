@@ -526,6 +526,10 @@ export default function StudioOSPage() {
                         <p className="text-gray-500 max-w-sm text-sm">Synchronize with your team in the AETHERYX workspace to begin visual collaboration.</p>
                         <button 
                           onClick={async () => {
+                            if (!user) {
+                              triggerNotification("Unauthorized access. Please reconnect.");
+                              return;
+                            }
                             triggerNotification("Neural links established. Synchronizing workspace...");
                             const { data } = await supabase
                               .from('studio_state')

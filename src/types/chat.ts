@@ -95,7 +95,7 @@ export interface Topic {
 
 export interface Panel {
   id: string;
-  type: 'chat' | 'feed' | 'bot-forge' | 'studio' | 'ai' | 'profile' | 'notifications' | 'node-explorer' | 'creator' | 'asset-library' | 'creator-tools' | 'neural-graph' | 'tactical-map' | 'city-browser' | 'dev-grid' | 'trust-safety' | 'engineering-console';
+  type: 'chat' | 'feed' | 'bot-forge' | 'studio' | 'ai' | 'profile' | 'notifications' | 'node-explorer' | 'creator' | 'asset-library' | 'creator-tools' | 'neural-graph' | 'tactical-map' | 'city-browser' | 'dev-grid' | 'trust-safety' | 'engineering-console' | 'team-dashboard';
   title: string;
   x: number;
   y: number;
@@ -150,9 +150,26 @@ export interface DevGridConnection {
   inputId: string;
 }
 
+export interface CityRoleConfig {
+  name: string;
+  color: string;
+  users: number;
+  perms: string[];
+}
+
+export interface CityPolicy {
+  id: string;
+  label: string;
+  desc: string;
+  icon: string;
+  active: boolean;
+}
+
 export interface CityLogic {
-  nodes: DevGridNode[];
-  connections: DevGridConnection[];
+  nodes?: DevGridNode[];
+  connections?: DevGridConnection[];
+  roles?: CityRoleConfig[];
+  policies?: CityPolicy[];
 }
 
 export interface Node {

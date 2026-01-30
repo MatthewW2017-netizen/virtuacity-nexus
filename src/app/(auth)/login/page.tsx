@@ -10,11 +10,21 @@ import { Zap, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const router = useRouter();
+
+  // Load remembered email on mount
+  React.useEffect(() => {
+    const remembered = localStorage.getItem("nexus_remembered_email");
+    if (remembered) {
+      setEmail(remembered);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleResendVerification = async () => {
     if (!email) {
@@ -43,6 +53,13 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+
+    // Handle remember me
+    if (rememberMe) {
+      localStorage.setItem("nexus_remembered_email", email);
+    } else {
+      localStorage.removeItem("nexus_remembered_email");
+    }
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -124,6 +141,19 @@ export default function LoginPage() {
                 className="w-full bg-nexus-dark/50 border border-nexus-indigo/20 rounded-xl py-3 pl-10 pr-4 text-white focus:outline-none focus:border-nexus-indigo transition-all placeholder:text-nexus-indigo/20"
               />
             </div>
+          </div>
+
+          <div className="flex items-center space-x-2 ml-1">
+            <input 
+              type="checkbox"
+              id="remember-me"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 rounded bg-nexus-dark/50 border border-nexus-indigo/20 text-nexus-indigo focus:border-nexus-indigo cursor-pointer"
+            />
+            <label htmlFor="remember-me" className="text-xs font-bold uppercase tracking-widest text-nexus-indigo/50 cursor-pointer hover:text-nexus-indigo transition-colors">
+              Remember Identity
+            </label>
           </div>
 
           {error && (

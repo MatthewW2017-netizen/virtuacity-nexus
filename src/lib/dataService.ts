@@ -28,49 +28,70 @@ export const dataService = {
   },
 
   async createCity(cityData: Partial<Node>, userId: string): Promise<Node | null> {
-    const { data: city, error } = await supabase
-      .from('cities')
-      .insert({
-        name: cityData.name,
-        category: cityData.category,
-        atmosphere: cityData.atmosphere,
-        hex_color: cityData.hexColor,
-        icon: cityData.icon,
-        owner_id: userId,
-        status: 'online',
-        x: Math.random() * 1000,
-        y: Math.random() * 1000
-      })
-      .select()
-      .single();
+    try {
+      console.log('[DataService] Creating city:', { cityData, userId });
+      
+      const { data: city, error } = await supabase
+        .from('cities')
+        .insert({
+          name: cityData.name,
+          category: cityData.category,
+          atmosphere: cityData.atmosphere,
+          hex_color: cityData.hexColor,
+          icon: cityData.icon,
+          owner_id: userId,
+          status: 'online',
+          x: Math.random() * 1000,
+          y: Math.random() * 1000
+        })
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Error creating city:', error);
+      if (error) {
+        console.error('[DataService] Error creating city:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+        
+        if (error.code === 'PGRST201') {
+          console.error('[DataService] Permission denied - check RLS policies on cities table');
+        }
+        return null;
+      }
+      
+      console.log('[DataService] City created successfully:', city);
+
+      // Create default districts
+      console.log('[DataService] Creating default districts for city:', city.id);
+      const { data: districts, error: dError } = await supabase
+        .from('districts')
+        .insert([
+          { city_id: city.id, name: 'Central Core', type: 'neural', occupancy: 0 },
+          { city_id: city.id, name: 'Data Nexus', type: 'industrial', occupancy: 0 }
+        ])
+        .select();
+
+      if (dError) {
+        console.error('[DataService] Error creating districts:', dError);
+      } else {
+        console.log('[DataService] Districts created successfully:', districts);
+      }
+
+      return {
+        ...city,
+        hexColor: city.hex_color,
+        ownerId: city.owner_id,
+        districts: districts || [],
+        streams: [],
+        activeModules: [],
+        orbitingStreams: []
+      };
+    } catch (err) {
+      console.error('[DataService] Unexpected error in createCity:', err);
       return null;
     }
-
-    // Create default districts
-    const { data: districts, error: dError } = await supabase
-      .from('districts')
-      .insert([
-        { city_id: city.id, name: 'Central Core', type: 'neural', occupancy: 0 },
-        { city_id: city.id, name: 'Data Nexus', type: 'industrial', occupancy: 0 }
-      ])
-      .select();
-
-    if (dError) {
-      console.error('Error creating districts:', dError);
-    }
-
-    return {
-      ...city,
-      hexColor: city.hex_color,
-      ownerId: city.owner_id,
-      districts: districts || [],
-      streams: [],
-      activeModules: [],
-      orbitingStreams: []
-    };
   },
 
   async updateCity(cityId: string, updates: Partial<Node>): Promise<boolean> {
@@ -82,7 +103,8 @@ export const dataService = {
         atmosphere: updates.atmosphere,
         hex_color: updates.hexColor,
         icon: updates.icon,
-        status: updates.status
+        status: updates.status,
+        logic: updates.logic
       })
       .eq('id', cityId);
 
@@ -142,6 +164,19 @@ export const dataService = {
     }
 
     return stream;
+  },
+
+  async updateStreamModules(streamId: string, modules: string[]) {
+    const { error } = await supabase
+      .from('streams')
+      .update({ modules })
+      .eq('id', streamId);
+
+    if (error) {
+      console.error('Error updating stream modules:', error);
+      return false;
+    }
+    return true;
   },
 
   async fetchMessages(streamId: string): Promise<Message[]> {
@@ -223,10 +258,15 @@ export const dataService = {
     return data || [];
   },
 
-  async createSystemUpdate(type: 'feature' | 'fix' | 'security', title: string, description: string) {
+  async createSystemUpdate(type: string, title: string, description: string) {
     const { error } = await supabase
       .from('system_updates')
-      .insert({ type, title, description, created_at: new Date().toISOString() });
+      .insert({
+        type,
+        title,
+        description,
+        created_at: new Date().toISOString()
+      });
 
     if (error) {
       console.error('Error creating system update:', error);

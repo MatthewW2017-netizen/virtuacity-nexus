@@ -12,7 +12,7 @@ export const DiagnosticOverlay = () => {
     env: 'checking',
     auth: 'checking',
     latency: 0,
-    version: '2.0.6-STABLE'
+    version: '3.0.0-STABLE'
   });
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export const DiagnosticOverlay = () => {
         env: envStatus,
         auth: authStatus,
         latency: Date.now() - start,
-        version: '2.0.6-STABLE'
+        version: '3.0.0-STABLE'
       });
     };
 

@@ -9,7 +9,7 @@ import { DiagnosticOverlay } from "../DiagnosticOverlay";
 import { 
   ChatStreamPanel, NodeExplorerPanel, BotForgePanel, AssetLibraryPanel, 
   CreatorToolsPanel, NeuralGraphPanel, TacticalMapPanel, ProfilePanel,
-  CityBrowserPanel, DevGridPanel
+  CityBrowserPanel, DevGridPanel, TeamDashboardPanel
 } from "./PanelContents";
 import { TrustSafetyPanel } from "./TrustSafetyPanel";
 import { AetheryxCore, SpatialNotification } from "./SpatialElements";
@@ -93,7 +93,7 @@ const GovernanceHUD = ({ activeSpaceId }: { activeSpaceId: string }) => {
 interface SpaceSwitcherProps {
   spaces: Record<string, Space>;
   activeSpaceId: string;
-  handleSpaceSwitch: (id: string) => void;
+  handleSpaceSwitch: (id: Space['id']) => void;
   currentUserRole: string;
   router: any;
   setShowOnboarding: (show: boolean) => void;
@@ -203,8 +203,31 @@ export default function NexusApp() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
+  // Lifecycle
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // State
   const [activeSpaceId, setActiveSpaceId] = useState<Space['id']>('social');
+
+  // Persist activeSpaceId to localStorage
+  useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem('nexus_active_space', activeSpaceId);
+    }
+  }, [activeSpaceId, isMounted]);
+
+  // Load activeSpaceId from localStorage
+  useEffect(() => {
+    const savedSpace = localStorage.getItem('nexus_active_space');
+    if (savedSpace) {
+      setActiveSpaceId(savedSpace as any);
+    }
+  }, []);
+
   const [nodes, setNodes] = useState<Node[]>([]);
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [activeNodeId, setActiveNodeId] = useState<string>("n1");
@@ -226,8 +249,21 @@ export default function NexusApp() {
   const [aetheryxStatus, setAetheryxStatus] = useState("Idle");
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('connecting');
   const [studioBots, setStudioBots] = useState<any[]>([]);
+  const [studioTeam, setStudioTeam] = useState<any[]>([]);
+  const [isSavingLayout, setIsSavingLayout] = useState(false);
 
   const CURRENT_VERSION = "3.0.0"; // Increment version for "What's New" check
+
+  // Check for updates
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const lastVersion = localStorage.getItem('nexus_version');
+      if (lastVersion !== CURRENT_VERSION) {
+        setShowUpdates(true);
+        localStorage.setItem('nexus_version', CURRENT_VERSION);
+      }
+    }
+  }, []);
 
   // Role Logic
   const activeNode = useMemo(() => {
@@ -274,12 +310,21 @@ export default function NexusApp() {
     const fetchStudioState = async () => {
       const { data, error } = await supabase
         .from('studio_state')
-        .select('bots')
+        .select('bots, team, workspace_layout')
         .eq('user_id', user.id)
         .single();
 
-      if (data?.bots) {
-        setStudioBots(data.bots);
+      if (data) {
+        if (data.bots) setStudioBots(data.bots);
+        if (data.team) setStudioTeam(data.team);
+        if (data.workspace_layout && Array.isArray(data.workspace_layout)) {
+          // workspace_layout is expected to be an array of spaces
+          const savedSpaces: Record<string, Space> = {};
+          data.workspace_layout.forEach((s: any) => {
+            if (s.id) savedSpaces[s.id] = s;
+          });
+          setCustomSpaces(savedSpaces);
+        }
       }
     };
 
@@ -294,8 +339,14 @@ export default function NexusApp() {
         table: 'studio_state',
         filter: `user_id=eq.${user.id}`
       }, (payload) => {
-        if (payload.new.bots) {
-          setStudioBots(payload.new.bots);
+        if (payload.new.bots) setStudioBots(payload.new.bots);
+        if (payload.new.team) setStudioTeam(payload.new.team);
+        if (payload.new.workspace_layout) {
+          const savedSpaces: Record<string, Space> = {};
+          payload.new.workspace_layout.forEach((s: any) => {
+            if (s.id) savedSpaces[s.id] = s;
+          });
+          setCustomSpaces(savedSpaces);
         }
       })
       .subscribe();
@@ -351,9 +402,7 @@ export default function NexusApp() {
               currentUserRole,
               messages: activeMessages,
               onSendMessage: async (content: string) => {
-                if (activeStreamId) {
-                  await dataService.sendMessage(activeStreamId, content, user?.id || 'u1');
-                }
+                await handleSendMessage(content);
               }
             } 
           }
@@ -411,7 +460,8 @@ export default function NexusApp() {
         name: 'Creative Studio',
         panels: [
           { id: "shared-forge", type: "bot-forge", title: "AETHERYX Bot Forge", x: 100, y: 100, width: 400, height: 500, zIndex: 10, data: { bots: studioBots } },
-          { id: "shared-chat", type: "chat", title: "Project Stream", x: 550, y: 100, width: 600, height: 700, zIndex: 20, data: { streamId: "s3" } }
+          { id: "shared-team", type: "team-dashboard", title: "Team Dashboard", x: 520, y: 100, width: 500, height: 600, zIndex: 15, data: { team: studioTeam } },
+          { id: "shared-chat", type: "chat", title: "Project Stream", x: 1040, y: 100, width: 400, height: 700, zIndex: 20, data: { streamId: "s3" } }
         ]
       },
       creator: {
@@ -524,6 +574,51 @@ export default function NexusApp() {
     }));
   };
 
+  useEffect(() => {
+    if (!user || !customSpaces || Object.keys(customSpaces).length === 0) return;
+
+    const saveWorkspace = async () => {
+      setIsSavingLayout(true);
+      try {
+        // Convert customSpaces record to an array for JSONB storage
+        const workspaceArray = Object.values(customSpaces).map(space => ({
+          id: space.id,
+          name: space.name,
+          panels: (space.panels || []).map(p => ({
+            id: p.id,
+            type: p.type,
+            title: p.title,
+            x: p.x,
+            y: p.y,
+            width: p.width,
+            height: p.height,
+            zIndex: p.zIndex,
+            isMinimized: p.isMinimized,
+            activeTabId: p.activeTabId,
+            tabs: p.tabs
+          }))
+        }));
+
+        await supabase
+          .from('studio_state')
+          .upsert({
+            user_id: user.id,
+            workspace_layout: workspaceArray,
+            bots: studioBots,
+            team: studioTeam,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+      } catch (err) {
+        console.error('Failed to save workspace:', err);
+      } finally {
+        setTimeout(() => setIsSavingLayout(false), 1000);
+      }
+    };
+
+    const timer = setTimeout(saveWorkspace, 2000); // 2 second debounce
+    return () => clearTimeout(timer);
+  }, [customSpaces, studioBots, studioTeam, user, activeSpaceId]);
+
   // Fetch cities from Supabase and subscribe to updates
   useEffect(() => {
     async function loadData() {
@@ -611,7 +706,7 @@ export default function NexusApp() {
     setShowUpdates(false);
   };
 
-  if (authLoading) {
+  if (!isMounted || authLoading) {
     return (
       <div className="h-screen w-full bg-[#0A0A0B] flex flex-col items-center justify-center">
         <div className="relative">
@@ -694,28 +789,53 @@ export default function NexusApp() {
     }
   };
 
-  const handleToggleModule = (moduleId: string) => {
+  const handleCreateBot = () => {
+    if (currentUserRole === 'Citizen') {
+      addNotification("Architect clearance required for construct initialization.", 'alert');
+      return;
+    }
+    const newBot = {
+      id: `bot_${Math.random().toString(36).substr(2, 9)}`,
+      name: "New Construct",
+      type: "ai-assistant",
+      status: "idle",
+      created_at: new Date().toISOString(),
+      modules: []
+    };
+    setStudioBots(prev => [...prev, newBot]);
+    addNotification("New visual intelligence construct initialized in Forge.", 'info');
+  };
+
+  const handleToggleModule = async (moduleId: string) => {
     if (currentUserRole === 'Citizen') {
       addNotification("Architect clearance required for module injection.", 'alert');
       return;
     }
     const mod = MOCK_MODULES.find(m => m.id === moduleId);
+    
+    // Find the current stream to update its modules
+    const streamToUpdate = activeNode?.streams?.find(s => s.id === activeStreamId);
+    if (!streamToUpdate) return;
+
+    const currentModules = streamToUpdate.modules || [];
+    const hasModule = currentModules.includes(moduleId);
+    const newModules = hasModule 
+      ? currentModules.filter(id => id !== moduleId)
+      : [...currentModules, moduleId];
+
+    // Optimistic update
     setNodes(prev => prev.map(node => {
       if (node.id === activeNodeId) {
         return {
           ...node,
           streams: (node.streams || []).map(stream => {
             if (stream.id === activeStreamId) {
-              const currentModules = stream.modules || [];
-              const hasModule = currentModules.includes(moduleId);
               if (!hasModule && mod) addNotification(`Injected ${mod.name} into stream.`, 'info');
               else if (mod) addNotification(`Extracted ${mod.name} from stream.`, 'alert');
               
               return {
                 ...stream,
-                modules: hasModule 
-                  ? currentModules.filter(id => id !== moduleId)
-                  : [...currentModules, moduleId]
+                modules: newModules
               };
             }
             return stream;
@@ -724,6 +844,9 @@ export default function NexusApp() {
       }
       return node;
     }));
+
+    // Persist to database
+    await dataService.updateStreamModules(activeStreamId, newModules);
   };
 
   const handleInjectModule = (moduleId: string, x: number, y: number) => {
@@ -789,18 +912,22 @@ export default function NexusApp() {
   const handleCreateCity = async (cityData: Partial<Node>) => {
     if (!user) {
       addNotification("Identity verification required to initialize civilization.", 'alert');
+      console.error('[NexusApp] No user available for city creation');
       return;
     }
 
+    console.log('[NexusApp] Starting city creation with data:', cityData);
     const newNode = await dataService.createCity(cityData, user.id);
     
     if (newNode) {
+      console.log('[NexusApp] City created successfully, updating UI:', newNode);
       setNodes(prev => [...prev, newNode]);
       addNotification(`Civilization ${newNode.name} initialized on the grid.`, 'info');
       setShowCreateCityModal(false);
       handleJoinDistrict(newNode.id);
     } else {
-      addNotification("Failed to stabilize new civilization core.", 'alert');
+      console.error('[NexusApp] Failed to create city');
+      addNotification("Failed to stabilize new civilization core. Check browser console for details.", 'alert');
     }
   };
 
@@ -826,6 +953,7 @@ export default function NexusApp() {
   };
 
   const handleUpdateCity = async (cityId: string, updates: Partial<Node>) => {
+    setIsSavingLayout(true);
     const success = await dataService.updateCity(cityId, updates);
     if (success) {
       setNodes(prev => prev.map(node => 
@@ -835,6 +963,7 @@ export default function NexusApp() {
     } else {
       addNotification("Failed to update civilization core.", 'alert');
     }
+    setTimeout(() => setIsSavingLayout(false), 1000);
   };
 
   const handleCreateDistrict = async (cityId: string, districtData: Partial<District>) => {
@@ -1497,7 +1626,20 @@ export default function NexusApp() {
           modules={MOCK_MODULES}
           activeModules={activeStream?.modules || []}
           onAddModule={handleToggleModule}
-          currentUserRole={currentUserRole}
+          onCreateBot={handleCreateBot}
+          currentUserRole={currentUserRole as any}
+        />
+      );
+    }
+    if (panel.type === 'team-dashboard') {
+      return (
+        <TeamDashboardPanel 
+          team={studioTeam}
+          isFounder={currentUserRole === 'Founder'}
+          onRemoveMember={(id: string | number) => {
+            setStudioTeam(prev => prev.filter(m => m.id !== id));
+            addNotification("Team member link severed.", 'info');
+          }}
         />
       );
     }
@@ -1621,6 +1763,20 @@ export default function NexusApp() {
       {/* HUD Elements (Global) */}
       <GovernanceHUD activeSpaceId={activeSpaceId} />
       
+      <AnimatePresence>
+        {isSavingLayout && (
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="fixed bottom-6 left-6 z-[200] flex items-center gap-3 bg-nexus-indigo/20 border border-nexus-indigo/40 px-4 py-2 rounded-2xl backdrop-blur-xl shadow-2xl"
+          >
+            <div className="w-2 h-2 rounded-full bg-nexus-indigo animate-ping" />
+            <span className="text-[10px] font-black text-nexus-indigo uppercase tracking-widest">Workspace Synced</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Warp Visual Overlay */}
       <AnimatePresence>
         {isWarping && (
@@ -1771,13 +1927,15 @@ export default function NexusApp() {
             <div className="flex items-center space-x-2">
               <div className={cn(
                 "w-1.5 h-1.5 rounded-full transition-all duration-500",
+                isSavingLayout ? "bg-nexus-indigo animate-spin" :
                 connectionStatus === 'connected' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" :
                 connectionStatus === 'connecting' ? "bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]" :
                 "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]"
               )} />
               <div className="text-[9px] font-mono font-bold text-white/40 uppercase tracking-[0.1em]">
-                {connectionStatus === 'connected' ? 'System Synchronized' : 
-                 connectionStatus === 'connecting' ? 'Calibrating Frequencies' : 'Connection Interrupted'} // <span className="text-white/60">{activeNode?.name}</span>
+                {isSavingLayout ? 'Synchronizing Workspace...' :
+                 connectionStatus === 'connected' ? 'System Synchronized' : 
+                 connectionStatus === 'connecting' ? 'Calibrating Frequencies' : 'Connection Interrupted'}
               </div>
             </div>
           </div>
@@ -1786,7 +1944,11 @@ export default function NexusApp() {
           <div className="fixed top-32 right-10 flex flex-col space-y-4 z-[2000]">
             <AnimatePresence>
               {notifications.map((n) => (
-                <SpatialNotification key={n.id} message={n.message} type={n.type} />
+                <SpatialNotification 
+                  key={n.id} 
+                  notification={n} 
+                  onClose={() => setNotifications(prev => prev.filter(item => item.id !== n.id))} 
+                />
               ))}
             </AnimatePresence>
           </div>
