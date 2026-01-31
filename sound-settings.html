@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sound Settings — Nexus OS</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="topbar"><div class="brand"><img src="assets/logo.svg" class="logo" alt="logo"></div></header>
+  <main id="main" class="page-content">
+    <h1>Sound Settings</h1>
+    <p>This page exposes the same controls as the in-page sound settings panel. Use the button below to open the live settings panel (requires the site JS to be loaded).</p>
+    <p><button id="open-sound" class="btn primary">Open Sound Settings</button></p>
+  </main>
+  <script src="js/main.js"></script>
+  <script>
+    document.getElementById('open-sound').addEventListener('click', ()=>{
+      if(window.nexus && window.nexus.settings) window.nexus.settings();
+      else alert('Sound system not loaded — ensure /js/sound-system.js is available.');
+    });
+  </script>
+</body>
+</html>

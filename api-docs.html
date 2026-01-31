@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Nexus OS API Documentation - Complete reference for all APIs">
+  <title>API Documentation | Nexus Developer Portal</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/developer.css">
+  <link rel="stylesheet" href="css/sound-metrics.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div id="bg-nodes" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <a href="developer.html">
+        <img src="assets/logo.svg" alt="Nexus OS logo" class="logo" width="180" height="36">
+      </a>
+      <span class="studio">API Reference</span>
+    </div>
+    <nav class="top-actions">
+      <a href="developer.html" class="btn outlined">Portal</a>
+      <a href="api-docs.html" class="btn outlined" style="border-color: rgba(139, 92, 246, 0.6);">API Docs</a>
+      <a href="guides.html" class="btn outlined">Guides</a>
+      <a href="developer-team.html" class="btn outlined">Team</a>
+      <a href="index.html" class="btn outlined">Main Site</a>
+        <button type="button" class="theme-toggle" aria-pressed="false" title="Toggle light / dark theme">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Theme</span>
+        </button>
+        <button type="button" class="contrast-toggle" aria-pressed="false" title="Toggle high contrast mode">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>Contrast</span>
+        </button>      <button id="settings-btn" class="btn outlined" title="Open settings panel">⚙️ Settings</button>    </nav>
+  </header>
+
+  <div class="dev-hero" style="padding: 60px 2rem 40px;">
+    <h1 style="font-size: 2.8rem;">API Reference</h1>
+    <p>Complete documentation for all Nexus OS APIs. Every endpoint documented with examples, SDKs, and best practices.</p>
+  </div>
+
+  <main id="main" class="page-content">
+    <section class="dev-section">
+      <h2>Getting Started</h2>
+      <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 16px; padding: 32px; margin-bottom: 40px;">
+        <h3 style="color: #fff; margin-top: 0;">API Base URL</h3>
+        <div class="code-block">https://api.nexusos.com/v1</div>
+
+        <h3 style="color: #fff; margin-top: 32px;">Authentication Header</h3>
+        <div class="code-block">Authorization: Bearer YOUR_API_KEY</div>
+
+        <h3 style="color: #fff; margin-top: 32px;">Response Format</h3>
+        <div class="code-block">
+<code>{
+  "success": true,
+  "data": { ... },
+  "meta": {
+    "timestamp": "2026-01-31T05:27:18Z",
+    "version": "1.0"
+  }
+}
+</code>
+        </div>
+      </div>
+    </section>
+
+    <section class="dev-section" id="user-api">
+      <h2>User API</h2>
+      <p>Manage user profiles, authentication, and identity.</p>
+
+      <div class="api-endpoint">
+        <div class="api-method get">GET</div>
+        <div class="api-path">/users/{user_id}</div>
+        <div class="api-description">Retrieve user profile information</div>
+        <div class="code-block">
+<code>curl -X GET https://api.nexusos.com/v1/users/user_123 \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+Response:
+{
+  "success": true,
+  "data": {
+    "id": "user_123",
+    "username": "john_doe",
+    "email": "john@example.com",
+    "created_at": "2026-01-15T10:30:00Z",
+    "avatar_url": "https://...",
+    "verified": true
+  }
+}
+</code>
+        </div>
+      </div>
+
+      <div class="api-endpoint">
+        <div class="api-method post">POST</div>
+        <div class="api-path">/users</div>
+        <div class="api-description">Create a new user account</div>
+        <div class="code-block">
+<code>curl -X POST https://api.nexusos.com/v1/users \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "username": "jane_doe",
+    "email": "jane@example.com",
+    "password": "secure_password"
+  }'
+</code>
+        </div>
+      </div>
+
+      <div class="api-endpoint">
+        <div class="api-method put">PUT</div>
+        <div class="api-path">/users/{user_id}</div>
+        <div class="api-description">Update user profile</div>
+      </div>
+    </section>
+
+    <section class="dev-section" id="messaging-api">
+      <h2>Messaging API</h2>
+      <p>Send and receive messages, manage conversations.</p>
+
+      <div class="api-endpoint">
+        <div class="api-method post">POST</div>
+        <div class="api-path">/messages</div>
+        <div class="api-description">Send a message to a space or user</div>
+        <div class="code-block">
+<code>curl -X POST https://api.nexusos.com/v1/messages \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "space_id": "space_456",
+    "content": "Hello Nexus!",
+    "type": "text",
+    "mentions": ["user_789"]
+  }'
+</code>
+        </div>
+      </div>
+
+      <div class="api-endpoint">
+        <div class="api-method get">GET</div>
+        <div class="api-path">/spaces/{space_id}/messages</div>
+        <div class="api-description">Fetch messages from a space with pagination</div>
+      </div>
+
+      <div class="api-endpoint">
+        <div class="api-method delete">DELETE</div>
+        <div class="api-path">/messages/{message_id}</div>
+        <div class="api-description">Delete a message</div>
+      </div>
+    </section>
+
+    <section class="dev-section" id="economy-api">
+      <h2>Economy API</h2>
+      <p>Manage virtual currencies, transactions, and monetization.</p>
+
+      <div class="api-endpoint">
+        <div class="api-method get">GET</div>
+        <div class="api-path">/wallets/{user_id}</div>
+        <div class="api-description">Get user wallet balance</div>
+        <div class="code-block">
+<code>Response:
+{
+  "success": true,
+  "data": {
+    "user_id": "user_123",
+    "currency": "NXS",
+    "balance": 1500,
+    "locked_balance": 0,
+    "updated_at": "2026-01-31T05:27:18Z"
+  }
+}
+</code>
+        </div>
+      </div>
+
+      <div class="api-endpoint">
+        <div class="api-method post">POST</div>
+        <div class="api-path">/transactions</div>
+        <div class="api-description">Create a transaction between users</div>
+        <div class="code-block">
+<code>curl -X POST https://api.nexusos.com/v1/transactions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "from_user_id": "user_123",
+    "to_user_id": "user_789",
+    "amount": 100,
+    "currency": "NXS",
+    "description": "Purchase: Premium Badge"
+  }'
+</code>
+        </div>
+      </div>
+    </section>
+
+    <section class="dev-section" id="game-api">
+      <h2>Game API</h2>
+      <p>Leaderboards, achievements, and multiplayer features.</p>
+
+      <div class="api-endpoint">
+        <div class="api-method post">POST</div>
+        <div class="api-path">/leaderboards</div>
+        <div class="api-description">Create a new leaderboard</div>
+        <div class="code-block">
+<code">curl -X POST https://api.nexusos.com/v1/leaderboards \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "name": "Weekly Scores",
+    "type": "global",
+    "period": "weekly",
+    "order": "descending"
+  }'
+</code>
+        </div>
+      </div>
+
+      <div class="api-endpoint">
+        <div class="api-method post">POST</div>
+        <div class="api-path">/leaderboards/{leaderboard_id}/scores</div>
+        <div class="api-description">Submit a score to leaderboard</div>
+      </div>
+
+      <div class="api-endpoint">
+        <div class="api-method get">GET</div>
+        <div class="api-path">/leaderboards/{leaderboard_id}/top</div>
+        <div class="api-description">Get top scores from leaderboard</div>
+      </div>
+    </section>
+
+    <section class="dev-section" id="analytics-api">
+      <h2>Analytics API</h2>
+      <p>Track events, analyze user behavior, and get insights.</p>
+
+      <div class="api-endpoint">
+        <div class="api-method post">POST</div>
+        <div class="api-path">/events</div>
+        <div class="api-description">Track a custom event</div>
+        <div class="code-block">
+<code>curl -X POST https://api.nexusos.com/v1/events \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "user_id": "user_123",
+    "event_name": "purchase_completed",
+    "properties": {
+      "item_id": "item_456",
+      "amount": 9.99,
+      "currency": "USD"
+    }
+  }'
+</code>
+        </div>
+      </div>
+
+      <div class="api-endpoint">
+        <div class="api-method get">GET</div>
+        <div class="api-path">/analytics/events</div>
+        <div class="api-description">Query events with filters and aggregations</div>
+      </div>
+    </section>
+
+    <section class="dev-section" id="notifications-api">
+      <h2>Notifications API</h2>
+      <p>Send push notifications, emails, and webhooks.</p>
+
+      <div class="api-endpoint">
+        <div class="api-method post">POST</div>
+        <div class="api-path">/notifications/send</div>
+        <div class="api-description">Send notification to user</div>
+        <div class="code-block">
+<code>curl -X POST https://api.nexusos.com/v1/notifications/send \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "user_id": "user_123",
+    "type": "push",
+    "title": "Welcome!",
+    "body": "Your account is ready",
+    "data": {
+      "action_url": "/dashboard"
+    }
+  }'
+</code>
+        </div>
+      </div>
+
+      <div class="api-endpoint">
+        <div class="api-method post">POST</div>
+        <div class="api-path">/webhooks</div>
+        <div class="api-description">Register a webhook endpoint</div>
+      </div>
+    </section>
+
+    <section class="dev-section">
+      <h2>Error Handling</h2>
+      <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 16px; padding: 32px;">
+        <h3 style="color: #fff; margin-top: 0;">HTTP Status Codes</h3>
+        <div style="margin: 20px 0;">
+          <p style="color: #cfd6ff;"><strong>200 OK</strong> - Request successful</p>
+          <p style="color: #cfd6ff;"><strong>201 Created</strong> - Resource created successfully</p>
+          <p style="color: #cfd6ff;"><strong>400 Bad Request</strong> - Invalid parameters</p>
+          <p style="color: #cfd6ff;"><strong>401 Unauthorized</strong> - Missing or invalid API key</p>
+          <p style="color: #cfd6ff;"><strong>403 Forbidden</strong> - Permission denied</p>
+          <p style="color: #cfd6ff;"><strong>404 Not Found</strong> - Resource not found</p>
+          <p style="color: #cfd6ff;"><strong>429 Too Many Requests</strong> - Rate limit exceeded</p>
+          <p style="color: #cfd6ff;"><strong>500 Internal Server Error</strong> - Server error</p>
+        </div>
+
+        <h3 style="color: #fff; margin-top: 32px;">Error Response Format</h3>
+        <div class="code-block">
+<code>{
+  "success": false,
+  "error": {
+    "code": "INVALID_REQUEST",
+    "message": "Missing required field: email",
+    "details": {
+      "field": "email",
+      "reason": "required"
+    }
+  }
+}
+</code>
+        </div>
+      </div>
+    </section>
+
+    <section class="dev-section">
+      <h2>Rate Limiting</h2>
+      <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 16px; padding: 32px;">
+        <p style="color: #cfd6ff; margin: 0;">Free tier: 100,000 requests/month (3.3 per second)</p>
+        <p style="color: #cfd6ff; margin: 16px 0 0;">Professional: 5,000,000 requests/month (165 per second)</p>
+        <p style="color: #cfd6ff; margin: 16px 0 0;">Enterprise: Custom limits with dedicated support</p>
+        
+        <h3 style="color: #fff; margin-top: 24px;">Rate Limit Headers</h3>
+        <div class="code-block">
+<code>X-RateLimit-Limit: 3600
+X-RateLimit-Remaining: 3599
+X-RateLimit-Reset: 1643619600
+</code>
+        </div>
+      </div>
+    </section>
+
+    <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(59, 130, 246, 0.08)); border: 2px solid rgba(139, 92, 246, 0.3); border-radius: 16px; padding: 48px 32px; text-align: center; margin: 60px 0;">
+      <h2 style="color: #fff; margin-top: 0;">Need Help?</h2>
+      <p style="color: #cfd6ff; margin: 16px 0;">Check our guides, ask on the community forum, or contact developer support.</p>
+      <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 24px;">
+        <button class="btn outlined" onclick="window.location.href='guides.html'">View Guides</button>
+        <button class="btn primary" onclick="window.location.href='contact.html'">Contact Support</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="page-footer">
+    <div class="footer-links">
+      <a href="developer.html">Portal</a>
+      <a href="api-docs.html">API Docs</a>
+      <a href="guides.html">Guides</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+    </div>
+    <p>&copy; 2026 Virtua City Studio. All rights reserved. | Nexus OS™</p>
+  </footer>
+
+  <script src="js/app.js"></script>
+  <script src="js/enhancements.js"></script>
+  <script src="js/sound-system.js"></script>
+</body>
+</html>

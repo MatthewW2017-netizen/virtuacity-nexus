@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Onboarding — Nexus OS</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="topbar">
+    <div class="brand">
+      <a href="/index.html"><img src="/assets/logo.svg" class="logo" alt="Nexus logo" width="180" height="36"></a>
+      <span class="studio">Virtua City Studio</span>
+    </div>
+    <nav class="top-actions">
+      <a href="/index.html" class="btn outlined">Home</a>
+      <a href="/onboarding.html" class="btn outlined" style="border-color: rgba(139, 92, 246, 0.6);">Onboarding</a>
+      <a href="/contact.html" class="btn outlined">Contact</a>
+      <button class="btn primary" id="buy-card">Get Nexus Card</button>
+    </nav>
+  </header>
+
+  <main id="main" class="stage" role="main">
+    <section class="hero">
+      <h1>Welcome to Nexus</h1>
+      <p>Let's get you set up — quick onboarding to start building and joining communities.</p>
+      <div style="margin-top:18px"><button id="start-setup" class="btn cta">Start Setup</button></div>
+    </section>
+
+    <section style="margin-top:24px;">
+      <h2>Why get a Nexus Card?</h2>
+      <p>The Nexus Card unlocks creator tools, priority support, and shippable identity perks across the platform.</p>
+      <ul>
+        <li>Priority moderation review</li>
+        <li>Creator tools credit</li>
+        <li>Customizable identity badge</li>
+      </ul>
+      <button id="buy-now" class="btn primary">Buy Card — $9.99</button>
+    </section>
+
+  </main>
+
+  <script src="/js/site-ui.js"></script>
+  <script>
+    document.getElementById('buy-card')?.addEventListener('click', ()=>{ window.alert('Checkout flow not connected in demo.'); });
+    document.getElementById('buy-now')?.addEventListener('click', ()=>{ window.alert('Checkout flow not connected in demo.'); });
+    document.getElementById('start-setup')?.addEventListener('click', ()=>{ location.href='/onboarding.html#steps'; });
+  </script>
+</body>
+</html>

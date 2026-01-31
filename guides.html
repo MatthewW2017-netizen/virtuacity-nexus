@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Nexus OS Developer Guides - Tutorials and learning paths">
+  <title>Developer Guides | Nexus Developer Portal</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/developer.css">
+  <link rel="stylesheet" href="css/sound-metrics.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div id="bg-nodes" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <a href="developer.html">
+        <img src="assets/logo.svg" alt="Nexus OS logo" class="logo" width="180" height="36">
+      </a>
+      <span class="studio">Developer Guides</span>
+    </div>
+    <nav class="top-actions">
+      <a href="developer.html" class="btn outlined">Portal</a>
+      <a href="api-docs.html" class="btn outlined">API Docs</a>
+      <a href="guides.html" class="btn outlined" style="border-color: rgba(139, 92, 246, 0.6);">Guides</a>
+      <a href="developer-team.html" class="btn outlined">Team</a>
+      <a href="index.html" class="btn outlined">Main Site</a>
+      <button type="button" class="theme-toggle" aria-pressed="false" title="Toggle light / dark theme">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Theme</span>
+      </button>
+      <button type="button" class="contrast-toggle" aria-pressed="false" title="Toggle high contrast mode">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Contrast</span>
+      </button>
+      <button id="settings-btn" class="btn outlined" title="Open settings panel">⚙️ Settings</button>
+    </nav>
+  </header>
+
+  <div class="dev-hero" style="padding: 60px 2rem 40px;">
+    <h1 style="font-size: 2.8rem;">Developer Guides</h1>
+    <p>Learn how to build amazing experiences on Nexus. From beginner tutorials to advanced patterns.</p>
+  </div>
+
+  <main id="main" class="page-content">
+    <section class="dev-section">
+      <h2>Getting Started</h2>
+      
+      <div class="quickstart-grid">
+        <div class="quickstart-card">
+          <div class="quickstart-number">📦</div>
+          <h4>Installation</h4>
+          <p>Install the Nexus SDK for your language. npm, pip, cargo, and more.</p>
+          <a href="#" style="color: #8b5cf6; text-decoration: underline; font-size: 0.9rem;">Read Guide →</a>
+        </div>
+        <div class="quickstart-card">
+          <div class="quickstart-number">🔑</div>
+          <h4>Authentication</h4>
+          <p>Set up API keys and OAuth 2.0 authentication for your app.</p>
+          <a href="#" style="color: #8b5cf6; text-decoration: underline; font-size: 0.9rem;">Read Guide →</a>
+        </div>
+        <div class="quickstart-card">
+          <div class="quickstart-number">🚀</div>
+          <h4>Your First Request</h4>
+          <p>Make your first API call and get data from Nexus in 5 minutes.</p>
+          <a href="#" style="color: #8b5cf6; text-decoration: underline; font-size: 0.9rem;">Read Guide →</a>
+        </div>
+        <div class="quickstart-card">
+          <div class="quickstart-number">🧪</div>
+          <h4>Testing & Debugging</h4>
+          <p>Use our sandbox environment and tools to test your integration.</p>
+          <a href="#" style="color: #8b5cf6; text-decoration: underline; font-size: 0.9rem;">Read Guide →</a>
+        </div>
+        <div class="quickstart-card">
+          <div class="quickstart-number">🔄</div>
+          <h4>Webhooks</h4>
+          <p>Set up webhooks to receive real-time events from Nexus.</p>
+          <a href="#" style="color: #8b5cf6; text-decoration: underline; font-size: 0.9rem;">Read Guide →</a>
+        </div>
+        <div class="quickstart-card">
+          <div class="quickstart-number">📈</div>
+          <h4>Monitoring</h4>
+          <p>Track API usage, errors, and performance with built-in tools.</p>
+          <a href="#" style="color: #8b5cf6; text-decoration: underline; font-size: 0.9rem;">Read Guide →</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="dev-section">
+      <h2>Building Applications</h2>
+      
+      <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 16px; padding: 32px; margin-bottom: 30px;">
+        <h3 style="color: #fff; margin-top: 0;">Building a Bot</h3>
+        <p style="color: #cfd6ff;">Learn how to create automated bots that interact in Nexus spaces.</p>
+        
+        <h4 style="color: #fff; margin: 20px 0 10px;">What You'll Learn:</h4>
+        <ul style="list-style: none; padding: 0; color: #cfd6ff;">
+          <li>✅ Bot architecture and lifecycle</li>
+          <li>✅ Command handling and permissions</li>
+          <li>✅ Event listeners and callbacks</li>
+          <li>✅ Database integration</li>
+          <li>✅ Deployment and scaling</li>
+        </ul>
+
+        <h4 style="color: #fff; margin: 20px 0 10px;">Example Code:</h4>
+        <div class="code-block">
+<code>const { NexusBot } = require('nexus-sdk');
+
+const bot = new NexusBot({
+  token: process.env.BOT_TOKEN
+});
+
+bot.command('hello', (ctx) => {
+  ctx.send(`Hello ${ctx.author.username}!`);
+});
+
+bot.on('message', (msg) => {
+  if (msg.content.startsWith('!')) {
+    // Handle command
+  }
+});
+
+bot.start();
+</code>
+        </div>
+
+        <a href="#" class="btn outlined" style="display: inline-block; margin-top: 16px;">Full Bot Guide →</a>
+      </div>
+
+      <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 16px; padding: 32px; margin-bottom: 30px;">
+        <h3 style="color: #fff; margin-top: 0;">Building a Mini-App</h3>
+        <p style="color: #cfd6ff;">Create interactive applications that run inside Nexus spaces.</p>
+        
+        <h4 style="color: #fff; margin: 20px 0 10px;">What You'll Learn:</h4>
+        <ul style="list-style: none; padding: 0; color: #cfd6ff;">
+          <li>✅ App manifest and configuration</li>
+          <li>✅ Interactive UI components</li>
+          <li>✅ State management</li>
+          <li>✅ Real-time data with WebSockets</li>
+          <li>✅ Monetization and analytics</li>
+        </ul>
+
+        <h4 style="color: #fff; margin: 20px 0 10px;">Example Code:</h4>
+        <div class="code-block">
+<code>import { NexusApp } from 'nexus-sdk';
+
+const app = new NexusApp({
+  id: 'my-mini-app',
+  name: 'My Awesome App'
+});
+
+app.use((ctx, next) => {
+  console.log(`User ${ctx.user.id} opened app`);
+  return next();
+});
+
+app.action('button_click', async (ctx) => {
+  await ctx.updateUI({
+    title: 'Updated!',
+    content: 'You clicked the button'
+  });
+});
+
+export default app;
+</code>
+        </div>
+
+        <a href="#" class="btn outlined" style="display: inline-block; margin-top: 16px;">Full Mini-App Guide →</a>
+      </div>
+
+      <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 16px; padding: 32px;">
+        <h3 style="color: #fff; margin-top: 0;">Building a Web Integration</h3>
+        <p style="color: #cfd6ff;">Integrate Nexus into your existing web application.</p>
+        
+        <h4 style="color: #fff; margin: 20px 0 10px;">What You'll Learn:</h4>
+        <ul style="list-style: none; padding: 0; color: #cfd6ff;">
+          <li>✅ OAuth 2.0 login flow</li>
+          <li>✅ Embedding Nexus widgets</li>
+          <li>✅ API authentication patterns</li>
+          <li>✅ Server-side integration</li>
+          <li>✅ Security best practices</li>
+        </ul>
+
+        <h4 style="color: #fff; margin: 20px 0 10px;">Example Code:</h4>
+        <div class="code-block">
+<code>// HTML
+<script src="https://sdk.nexusos.com/embed.js"></script>
+<div id="nexus-chat-widget"></div>
+
+// JavaScript
+<script>
+  window.nexusSDK.initialize({
+    apiKey: 'your-api-key',
+    spaceId: 'space_123',
+    container: '#nexus-chat-widget'
+  });
+</script>
+</code>
+        </div>
+
+        <a href="#" class="btn outlined" style="display: inline-block; margin-top: 16px;">Full Integration Guide →</a>
+      </div>
+    </section>
+
+    <section class="dev-section">
+      <h2>Advanced Topics</h2>
+      
+      <div class="dev-features">
+        <div class="dev-feature">
+          <div class="feature-icon">🔐</div>
+          <h3>Security Best Practices</h3>
+          <p>Learn how to secure your API keys, validate webhooks, and protect user data. CORS, CSRF, and more.</p>
+          <a href="#" style="color: #8b5cf6; text-decoration: underline; margin-top: 12px; display: inline-block;">Read Guide →</a>
+        </div>
+
+        <div class="dev-feature">
+          <div class="feature-icon">⚡</div>
+          <h3>Performance Optimization</h3>
+          <p>Caching strategies, batch requests, pagination, and optimizing your API usage for speed.</p>
+          <a href="#" style="color: #8b5cf6; text-decoration: underline; margin-top: 12px; display: inline-block;">Read Guide →</a>
+        </div>
+
+        <div class="dev-feature">
+          <div class="feature-icon">🔄</div>
+          <h3>Async & Event Handling</h3>
+          <p>Master webhooks, event listeners, and asynchronous patterns for real-time applications.</p>
+          <a href="#" style="color: #8b5cf6; text-decoration: underline; margin-top: 12px; display: inline-block;">Read Guide →</a>
+        </div>
+
+        <div class="dev-feature">
+          <div class="feature-icon">💾</div>
+          <h3>Database Integration</h3>
+          <p>Store data efficiently, design schemas, and handle transactions with Nexus data APIs.</p>
+          <a href="#" style="color: #8b5cf6; text-decoration: underline; margin-top: 12px; display: inline-block;">Read Guide →</a>
+        </div>
+
+        <div class="dev-feature">
+          <div class="feature-icon">🧪</div>
+          <h3>Testing & CI/CD</h3>
+          <p>Write tests, set up continuous integration, and deploy your apps with confidence.</p>
+          <a href="#" style="color: #8b5cf6; text-decoration: underline; margin-top: 12px; display: inline-block;">Read Guide →</a>
+        </div>
+
+        <div class="dev-feature">
+          <div class="feature-icon">📊</div>
+          <h3>Analytics & Monitoring</h3>
+          <p>Track user behavior, monitor API performance, and troubleshoot issues in production.</p>
+          <a href="#" style="color: #8b5cf6; text-decoration: underline; margin-top: 12px; display: inline-block;">Read Guide →</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="dev-section">
+      <h2>Code Examples & Templates</h2>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin: 30px 0;">
+        <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 14px; padding: 24px;">
+          <h3 style="color: #fff; margin-top: 0;">JavaScript Bot</h3>
+          <p style="color: #cfd6ff; font-size: 0.9rem;">A complete bot example in JavaScript with command handling.</p>
+          <a href="https://github.com/nexusos/examples/javascript-bot" class="btn outlined" style="display: inline-block; margin-top: 12px; font-size: 0.9rem;">View on GitHub →</a>
+        </div>
+
+        <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 14px; padding: 24px;">
+          <h3 style="color: #fff; margin-top: 0;">Python Mini-App</h3>
+          <p style="color: #cfd6ff; font-size: 0.9rem;">Build mini-apps with FastAPI and Nexus SDK.</p>
+          <a href="https://github.com/nexusos/examples/python-app" class="btn outlined" style="display: inline-block; margin-top: 12px; font-size: 0.9rem;">View on GitHub →</a>
+        </div>
+
+        <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 14px; padding: 24px;">
+          <h3 style="color: #fff; margin-top: 0;">React Integration</h3>
+          <p style="color: #cfd6ff; font-size: 0.9rem;">Embed Nexus in a React app with hooks and context.</p>
+          <a href="https://github.com/nexusos/examples/react-integration" class="btn outlined" style="display: inline-block; margin-top: 12px; font-size: 0.9rem;">View on GitHub →</a>
+        </div>
+
+        <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 14px; padding: 24px;">
+          <h3 style="color: #fff; margin-top: 0;">GraphQL API</h3>
+          <p style="color: #cfd6ff; font-size: 0.9rem;">Use Nexus GraphQL API for flexible queries.</p>
+          <a href="https://github.com/nexusos/examples/graphql-api" class="btn outlined" style="display: inline-block; margin-top: 12px; font-size: 0.9rem;">View on GitHub →</a>
+        </div>
+
+        <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 14px; padding: 24px;">
+          <h3 style="color: #fff; margin-top: 0;">Docker Deployment</h3>
+          <p style="color: #cfd6ff; font-size: 0.9rem;">Deploy your app with Docker and Kubernetes.</p>
+          <a href="https://github.com/nexusos/examples/docker-deploy" class="btn outlined" style="display: inline-block; margin-top: 12px; font-size: 0.9rem;">View on GitHub →</a>
+        </div>
+
+        <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 14px; padding: 24px;">
+          <h3 style="color: #fff; margin-top: 0;">Payment Integration</h3>
+          <p style="color: #cfd6ff; font-size: 0.9rem;">Accept payments and manage monetization.</p>
+          <a href="https://github.com/nexusos/examples/payment-integration" class="btn outlined" style="display: inline-block; margin-top: 12px; font-size: 0.9rem;">View on GitHub →</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="dev-section">
+      <h2>Video Tutorials</h2>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin: 30px 0;">
+        <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 14px; overflow: hidden;">
+          <div style="aspect-ratio: 16/9; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 3rem;">▶️</div>
+          <div style="padding: 20px;">
+            <h3 style="color: #fff; margin-top: 0;">Getting Started (15 min)</h3>
+            <p style="color: #cfd6ff; font-size: 0.9rem;">Learn the basics and make your first API call.</p>
+            <a href="#" style="color: #8b5cf6; text-decoration: underline;">Watch →</a>
+          </div>
+        </div>
+
+        <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 14px; overflow: hidden;">
+          <div style="aspect-ratio: 16/9; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 3rem;">▶️</div>
+          <div style="padding: 20px;">
+            <h3 style="color: #fff; margin-top: 0;">Building a Bot (30 min)</h3>
+            <p style="color: #cfd6ff; font-size: 0.9rem;">Create a fully functional Discord-like bot.</p>
+            <a href="#" style="color: #8b5cf6; text-decoration: underline;">Watch →</a>
+          </div>
+        </div>
+
+        <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 14px; overflow: hidden;">
+          <div style="aspect-ratio: 16/9; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 3rem;">▶️</div>
+          <div style="padding: 20px;">
+            <h3 style="color: #fff; margin-top: 0;">Deployment (20 min)</h3>
+            <p style="color: #cfd6ff; font-size: 0.9rem;">Deploy your app to production with confidence.</p>
+            <a href="#" style="color: #8b5cf6; text-decoration: underline;">Watch →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(59, 130, 246, 0.08)); border: 2px solid rgba(139, 92, 246, 0.3); border-radius: 16px; padding: 48px 32px; text-align: center; margin: 60px 0;">
+      <h2 style="color: #fff; margin-top: 0;">Ready to Build?</h2>
+      <p style="color: #cfd6ff; margin: 16px 0;">Start with our beginner guides and work your way up to advanced topics.</p>
+      <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 24px;">
+        <button class="btn primary" onclick="alert('Signup redirect')" style="padding: 14px 28px;">Create Free Account</button>
+        <button class="btn outlined" onclick="window.location.href='api-docs.html'" style="padding: 14px 28px;">View API Docs</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="page-footer">
+    <div class="footer-links">
+      <a href="developer.html">Portal</a>
+      <a href="api-docs.html">API Docs</a>
+      <a href="guides.html">Guides</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+    </div>
+    <p>&copy; 2026 Virtua City Studio. All rights reserved. | Nexus OS™</p>
+  </footer>
+
+  <script src="js/app.js"></script>
+  <script src="js/enhancements.js"></script>
+  <script src="js/sound-system.js"></script>
+</body>
+</html>

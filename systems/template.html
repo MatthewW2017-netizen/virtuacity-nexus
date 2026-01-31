@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="{{TITLE}} — Nexus OS system page. Learn how this system fits into the Nexus operating system." />
+  <link rel="stylesheet" href="/css/styles.css">
+  <title>{{TITLE}} — Nexus OS</title>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="topbar">
+    <div class="brand">
+      <img src="/assets/logo.svg" alt="Nexus OS logo" class="logo" width="180" height="36">
+      <span class="studio">Virtua City Studio</span>
+    </div>
+    <nav class="top-actions">
+      <a href="/index.html" class="btn outlined">Home</a>
+      <a href="/index.html#systems" class="btn">Systems</a>
+      <a href="/app-coming-soon.html" class="btn outlined">App coming soon</a>
+      <button type="button" class="theme-toggle" aria-pressed="false" title="Toggle light / dark theme">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Theme</span>
+      </button>
+      <button type="button" class="contrast-toggle" aria-pressed="false" title="Toggle high contrast mode">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Contrast</span>
+      </button>
+    </nav>
+  </header>
+
+  <main id="main" class="stage" role="main">
+    <section class="hero">
+      <h1 class="title">{{TITLE}}</h1>
+      <p class="subtitle">{{TAGLINE}}</p>
+    </section>
+
+    <section class="what-is">
+      <h2>Overview</h2>
+      <p>{{OVERVIEW}}</p>
+      <ul class="pill-list">
+        {{FEATURES}}
+      </ul>
+    </section>
+
+    <section class="systems">
+      <h2>How it fits in Nexus OS</h2>
+      <div class="card">
+        <p>{{INTEGRATION}}</p>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div>© Virtua City Studio — Nexus OS</div>
+      <div class="links">Back to <a href="/index.html">Nexus Home</a></div>
+    </footer>
+    <script src="/js/site-ui.js"></script>
+  </main>
+</body>
+</html>

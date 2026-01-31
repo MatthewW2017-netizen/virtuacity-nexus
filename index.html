@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Nexus OS — website-first cinematic OS for digital cities, creators, and studios. Built by Virtua City Studio." />
+  <title>Nexus OS — Virtua City Studio</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/sound-metrics.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div id="bg-nodes" aria-hidden="true"></div>
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/logo.svg" alt="Nexus OS logo" class="logo" width="180" height="36">
+      <span class="studio">Virtua City Studio</span>
+    </div>
+    <nav class="top-actions">
+      <a href="studio.html" class="btn outlined">Studio</a>
+      <a href="about.html" class="btn outlined">About</a>
+      <a href="appeals.html" class="btn outlined">Safety</a>
+      <a href="contact.html" class="btn outlined">Contact</a>
+      <a href="developer.html" class="btn outlined">Nexus Developer Portal</a>
+      <button id="enter-btn" class="btn primary">Enter Nexus</button>
+      <button id="build-btn" class="btn outlined">Build on Nexus</button>
+      <button type="button" class="theme-toggle" aria-pressed="false" title="Toggle light / dark theme">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Theme</span>
+      </button>
+      <button type="button" class="contrast-toggle" aria-pressed="false" title="Toggle high contrast mode">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Contrast</span>
+      </button>
+      <button id="settings-btn" class="btn outlined" title="Open settings panel">⚙️ Settings</button>
+    </nav>
+  </header>
+
+  <aside class="os-dock" aria-label="Nexus dock">
+    <button class="dock-btn" data-mode="normal" aria-pressed="true">Normal</button>
+    <button class="dock-btn" data-mode="rp">RP</button>
+    <button class="dock-btn" data-mode="studio">Studio</button>
+    <button class="dock-btn" data-mode="creator">Creator</button>
+  </aside>
+
+  <aside class="member-panel" aria-label="Member panel">
+    <div class="mp-header">Member Panel</div>
+    <div class="mp-list">
+      <div class="mp-item">Presence • Spaces</div>
+      <div class="mp-item">Teams • Studio</div>
+      <div class="mp-item">Creators • Bots</div>
+    </div>
+  </aside>
+
+  <main id="main" class="stage" role="main">
+    <section class="hero">
+      <h1 class="title">Nexus OS — The Operating System for Digital Worlds</h1>
+      <p class="subtitle">A website-first, app-second OS powering Cities, Roleplay, Studios, Creators, Bots and Mini‑Apps.</p>
+      <div class="hero-ctas">
+        <button id="enter-cta" class="btn cta">Enter Nexus</button>
+        <button id="build-cta" class="btn cta ghost">Build on Nexus</button>
+      </div>
+      <div class="hero-panels" aria-hidden="true">
+        <div class="panel small" style="--x:10; --y:5">Spaces</div>
+        <div class="panel medium" style="--x:40; --y:-10">Modes</div>
+        <div class="panel large" style="--x:-30; --y:20">Identity</div>
+      </div>
+    </section>
+
+    <section class="what-is">
+      <h2>What is Nexus OS?</h2>
+      <p>Nexus is a living operating system for digital cities and worlds — website-first, app-second. It combines Social, RP, Studio, Creator, Bot, and Mini‑App systems into a single OS-level experience.</p>
+      <ul class="pill-list">
+        <li>Website-first: full OS in the browser</li>
+        <li>App-second: desktop & mobile apps powered by the same OS</li>
+        <li>OS concepts: Spaces, Modes, Panels, Guides, and Owner Controls</li>
+      </ul>
+    </section>
+
+    <!-- REAL-TIME METRICS DASHBOARD -->
+    <section class="what-is">
+      <h2>Platform Growth & Statistics</h2>
+      <p>Nexus OS grows stronger every day. Here's what's happening right now:</p>
+      <div id="metrics-dashboard" role="region" aria-label="Platform metrics"></div>
+    </section>
+
+    <section class="systems">
+      <h2>Core Systems</h2>
+      <div class="grid core-grid">
+        <!-- 14 core system cards -->
+        <article class="card">
+          <h3>Nexus OS Core</h3>
+          <p>Base OS: modes, panels, identity, notifications, membership, verification.</p>
+        </article>
+        <article class="card"><h3>City OS</h3><p>Powers Cities: Spaces, onboarding, boosts, City Owner controls.</p></article>
+        <article class="card"><h3>RP OS</h3><p>Roleplay engine: jobs, dispatch, logs, RP economy, power-ups.</p></article>
+        <article class="card"><h3>Studio OS</h3><p>Dev environment: teams, logs, QA, assets, updates.</p></article>
+        <article class="card"><h3>Creator OS</h3><p>Creator ecosystem: tiers, badges, portfolios, reviews.</p></article>
+        <article class="card"><h3>Bot Developer OS</h3><p>Bot platform: commands, diagnostics, permissions, guides.</p></article>
+        <article class="card"><h3>Mini-App OS</h3><p>Launcher & platform: triggers, publishing, integrations.</p></article>
+        <article class="card"><h3>Spaces System</h3><p>Spaces instead of channels; Modes, linked Spaces, dynamic visibility.</p></article>
+        <article class="card"><h3>Chat System</h3><p>Identity-driven chat with Reply Capsules, Seen indicators, workflows.</p></article>
+        <article class="card"><h3>Member Panel</h3><p>Right-side OS panel: search, Spaces, RP units, teams, apps.</p></article>
+        <article class="card"><h3>Streaming + Voice</h3><p>Adaptive quality, membership-based streaming modes and detection.</p></article>
+        <article class="card"><h3>Customization Questions</h3><p>Interactive onboarding: unlock Spaces, roles, and access.</p></article>
+        <article class="card"><h3>Server Guide System</h3><p>Multi-guide engine: City / RP / Studio / Creator / Bot guides.</p></article>
+        <article class="card"><h3>City Owner Control Panel</h3><p>Owner OS for rules, visibility, attachments, and governance.</p></article>
+      </div>
+
+      <h2>Expansion Systems</h2>
+      <div class="grid expansion-grid">
+        <article class="card"><h3>Presence Engine</h3><p>Real-time presence across Spaces, Modes, and apps.</p></article>
+        <article class="card"><h3>Inventory System</h3><p>Universal inventory for items, tools, assets, and badges.</p></article>
+        <article class="card"><h3>Economy Engine</h3><p>Global & City currencies, marketplaces, and micro-economies.</p></article>
+        <article class="card"><h3>Profile OS</h3><p>Full identity card: RP/Studio/Creator identities and activity.</p></article>
+        <article class="card"><h3>Notification Brain</h3><p>Smart prioritization and mode-aware notifications.</p></article>
+        <article class="card"><h3>Automation Engine</h3><p>Automations for onboarding, rewards, and workflows.</p></article>
+        <article class="card"><h3>Theme Engine</h3><p>City-level theming: colors, fonts, animations, skins.</p></article>
+        <article class="card"><h3>Social Graph</h3><p>Network of collaboration centered on activities and projects.</p></article>
+        <article class="card"><h3>AI Companion Integration</h3><p>Mode-specific copilots for RP, Studio, Creator, and Bots.</p></article>
+        <article class="card"><h3>Analytics OS</h3><p>Analytics for Owners, Leads, and Creators.</p></article>
+      </div>
+
+      <h2>Essential Systems</h2>
+      <div class="grid essential-grid">
+        <article class="card"><h3>Security OS</h3><p>Trust & Safety, appeals, sandboxing, and enforcement.</p></article>
+        <article class="card"><h3>Performance Engine</h3><p>Caching, scaling, Space optimization, and streaming performance.</p></article>
+      </div>
+    </section>
+
+    <section class="guidelines">
+      <h2>Guidelines & Appeals</h2>
+      <p>Nexus enforces platform-wide guidelines and City-level rules. Appeals are transparent and reviewed with AI + human oversight.</p>
+    </section>
+
+    <footer class="footer">
+      <div>© 2026 Virtua City Studio — Nexus OS. The Operating System for Digital Worlds.</div>
+      <div class="links">
+        <a href="studio.html">Studio</a> · 
+        <a href="about.html">About</a> · 
+        <a href="appeals.html">Safety & Appeals</a> · 
+        <a href="contact.html">Contact</a> · 
+        <a href="developer.html">Developer Portal</a> · 
+        <a href="privacy.html">Privacy</a> · 
+        <a href="terms.html">Terms</a>
+      </div>
+    </footer>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script src="js/site-ui.js"></script>
+  <script src="js/enhancements.js"></script>
+  <script src="js/sound-system.js"></script>
+  <script src="js/metrics.js"></script>
+</body>
+</html>
